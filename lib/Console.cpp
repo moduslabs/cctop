@@ -22,13 +22,17 @@
 // Uses ANSI escape sequences to all for interactive console UI.
 // Does not rely on any dependency, such as curses/ncurses (that's the point!)
 
-#include <wchar.h>
+// TODO: stdin, raw, echo, icanon, etc.
+// https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+
 #include "Console.h"
+#include <wchar.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <termios.h>
 
 int wprintf(const wchar_t *format, ...);
 

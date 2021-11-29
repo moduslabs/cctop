@@ -27,25 +27,25 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
 int main() {
     setlocale(LC_ALL, "");
 
-    curl_global_init(CURL_GLOBAL_ALL);
+//    curl_global_init(CURL_GLOBAL_ALL);
 
-    CURL *curl = curl_easy_init();
-    curl_easy_setopt(curl, CURLOPT_URL, "https://www.google.com");
+//    CURL *curl = curl_easy_init();
+//    curl_easy_setopt(curl, CURLOPT_URL, "https://www.google.com");
 
-    FILE *outfile = fopen("/tmp/foo.txt", "w");
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
+//    FILE *outfile = fopen("/tmp/foo.txt", "w");
+//    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+//    curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
 
-    CURLcode res;
-    res = curl_easy_perform(curl);
-    fprintf(outfile, "\n\n\n");
-    fclose(outfile);
+//    CURLcode res;
+//    res = curl_easy_perform(curl);
+//    fprintf(outfile, "\n\n\n");
+//    fclose(outfile);
 //    return 0;
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
+//    curl_easy_cleanup(curl);
+//    curl_global_cleanup();
 //    console.bg_white();
 //    console.fg_black();
-    console.mode_blink();
+//    console.mode_blink();
 #if 0
 //    2581 ▁
 //    2582 ▂

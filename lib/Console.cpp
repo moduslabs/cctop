@@ -185,6 +185,8 @@ void Console::set_mode(uint8_t attr, bool on) {
         case ATTR_CONCEALED:
             this->concealed = on;
             break;
+        default:
+            break;
     }
 }
 

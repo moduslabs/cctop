@@ -54,12 +54,12 @@ void Network::read(std::map<std::string, Interface *> &m) {
   char *next = nullptr;
 
   for (next = buf; next < lim;) {
-    if_msghdr *ifm = (struct if_msghdr *) next;
+    auto *ifm = (if_msghdr *) next;
     next += ifm->ifm_msglen;
     if (ifm->ifm_type == RTM_IFINFO2) {
-      auto *if2m = (struct if_msghdr2 *) ifm;
+      auto *if2m = (if_msghdr2 *) ifm;
 
-      auto *sdl = (struct sockaddr_dl *) (if2m + 1);
+      auto *sdl = (sockaddr_dl *) (if2m + 1);
       char n[32];
       strncpy(n, sdl->sdl_data, sdl->sdl_nlen);
       n[sdl->sdl_nlen] = '\0';

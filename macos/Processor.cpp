@@ -46,13 +46,48 @@ struct dots {
         {L'█', 255, 0,   0}, // 0x2588
 };
 
+static void renderColor(int ndx) {
+    switch (ndx) {
+        case 0:
+            console.fg_yellow();
+            break;
+        case 1:
+            console.fg_cyan();
+            break;
+        case 2:
+            console.fg_cyan();
+            break;
+        case 3:
+            console.mode_bold();
+            console.fg_blue();
+            break;
+        case 4:
+            console.fg_magenta();
+            break;
+        case 5:
+            console.fg_magenta();
+            console.mode_bold();
+            break;
+        case 6:
+            console.fg_red();
+            break;
+        case 7:
+            console.fg_red();
+            console.mode_bold();
+            break;
+        default:
+            break;
+    }
+}
+
 static void renderDot(int ndx) {
     if (ndx >= 0 && ndx <= 7) {
-        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
+        renderColor(ndx);
+//        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
         console.wprint(L"%lc", dots[ndx].ch);
-        console.fg_rgb(255, 255, 255);
-    }
-    else {
+//        console.fg_rgb(255, 255, 255);
+        console.mode_clear();
+    } else {
         console.print(" ");
     }
 }
@@ -79,9 +114,6 @@ void CPU::print() {
 //            _idle = this->idle > 100 ? 100. : double(this->idle),
     _idle = total - _use;
 
-    for (int i = 0; i < CPU_HISTORY_SIZE - 1; i++) {
-        history[i] = history[i + 1];
-    }
     int ndx = -1;
     if (_use < 12.5) {
         ndx = 0;
@@ -100,10 +132,14 @@ void CPU::print() {
     } else {
         ndx = 7;
     }
+    for (int i = 0; i < CPU_HISTORY_SIZE - 1; i++) {
+        history[i] = history[i + 1];
+    }
 
     wchar_t c = dots[ndx].ch;
     history[CPU_HISTORY_SIZE - 1] = ndx;
 
+    renderColor(ndx);
     console.wprint(L"  %-6s %6.1f%% %6.1f%% %6.1f%% %6.1f%% %6.1f%% ",
                    this->name,
                    _use,
@@ -111,6 +147,7 @@ void CPU::print() {
                    _system,
                    _nice,
                    _idle);
+    console.mode_clear();
     renderDot(ndx);
     console.print(" [");
 

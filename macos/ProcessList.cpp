@@ -17,10 +17,14 @@ ProcessList::ProcessList() {
 
 ProcessList::~ProcessList() {
     //
+    list.clear();
 }
 
+static pid_t pids[99999];
+
 void ProcessList::update() {
-    pid_t pids[65536];
+    touched++; // bump so we know which in list<> we've seen.
+
     int num_processes = proc_listallpids(pids, sizeof(pids));
     for (int pp = 0; pp < num_processes; pp++) {
         pid_t pid = pids[pp];
@@ -28,6 +32,7 @@ void ProcessList::update() {
         bool isNew = false;
         if (list.count(pid) == 0) {
             p = new Process();
+            p->touched = 0;
             list.emplace((const uint32_t) pid, p);
             isNew = true;
         } else {
@@ -73,6 +78,7 @@ void ProcessList::update() {
             p->delta_system = info.pti_total_system - p->total_system;
             p->delta_user = info.pti_total_user - p->total_user;
         }
+        p->touched = touched;
         p->delta_cpu = p->delta_system + p->delta_user;
         if (processor.total_ticks > 0) {
             p->pct_cpu = double(p->delta_cpu) / double(processor.total_ticks);
@@ -97,6 +103,7 @@ void ProcessList::update() {
         p->numrunning = info.pti_numrunning;
         p->priority = info.pti_priority;
 
+#if 0
         if (uids.count(proc.pbi_uid) == 0) {
             passwd *pass = getpwuid(proc.pbi_uid);
             uids.emplace(proc.pbi_uid, new std::string(pass->pw_name));
@@ -105,6 +112,7 @@ void ProcessList::update() {
             group *grp = getgrgid(proc.pbi_gid);
             gids.emplace(proc.pbi_gid, new std::string(grp->gr_name));
         }
+#endif
     }
 }
 
@@ -113,11 +121,33 @@ static bool cmp(Process *a, Process *b) {
 }
 
 void ProcessList::print(bool test) {
-    std::vector<Process *> sorted;
+    std::vector<Process *> sorted, to_remove;
+    // Loop through our map of processes (pid is key, value is struct).
+    //
+    // If the process' touched value is not up-to-date with the master one
+    // in processList, then it's no longer running and needs to be removed;
+    // we add it to the to_remove vector.
+    //
+    // Otherwise, we add it to the sorted vector.
+    //
+    int remove_count = 0;
     for (auto &it: list) {
         auto p = it.second;
-        sorted.push_back(p);
+        if (p->touched != touched) {
+            to_remove.push_back(p);
+            remove_count++;
+        } else {
+            sorted.push_back(p);
+        }
     }
+    // We now have two vectors - sorted (to be sorted) and to_remove (to be removed).
+    // Loop through to_remove and remove the Process structs from list.
+    for (auto &it: to_remove) {
+        auto p = it;
+        list.erase(p->pid);
+    }
+
+    // sort away
     std::sort(sorted.begin(), sorted.end(), cmp);
     int count = 0;
     console.println("");
@@ -132,7 +162,7 @@ void ProcessList::print(bool test) {
         console.println("%6d %6.1f %-16.16s %-32.32s", p->pid,    p->pct_cpu * 10000, pass, p->name );
         if (count > 10) break;
     }
-    console.println("%ld processes", sorted.size());
+    console.println("%ld processes, %d removed", sorted.size(), remove_count);
 }
 
 ProcessList processList;

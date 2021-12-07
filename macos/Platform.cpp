@@ -22,6 +22,7 @@
 #include <libproc.h>
 #include <sys/utsname.h>
 #include <CoreFoundation/CFString.h>
+#include <CoreFoundation/CFNumber.h>
 #include <mach/mach_init.h>
 #include <mach/task.h>
 #include <IOKit/ps/IOPowerSources.h>
@@ -73,10 +74,56 @@ Platform::Platform() {
     this->kp = nullptr;
 }
 
+/*
+ * You'll want to use IOKit for this, specifically the IOPowerSources functions.
+ * You can use IOPSCopyPowerSourcesInfo() to get a blob, and IOPSCopyPowerSourcesList()
+ * to then extract a CFArray out of that, listing the power sources. Then use
+ * IOPSGetPowerSourceDescription() to pull out a dictionary (see IOPSKeys.h for the
+ * contents of the dictionary).
+ */
+static double foo() {
+    CFTypeRef sourceInfo = IOPSCopyPowerSourcesInfo();
+    CFArrayRef sourceList = IOPSCopyPowerSourcesList(sourceInfo);
+
+    // Loop through sources, find the first battery
+    int count = CFArrayGetCount(sourceList);
+    CFDictionaryRef source = nullptr;
+    for (int i = 0; i < count; i++) {
+        source = IOPSGetPowerSourceDescription(sourceInfo, CFArrayGetValueAtIndex(sourceList, i));
+
+        // Is this a battery?
+        auto type = (CFStringRef) CFDictionaryGetValue(source, CFSTR(kIOPSTransportTypeKey));
+        if (kCFCompareEqualTo == CFStringCompare(type, CFSTR(kIOPSInternalType), 0)) {
+            break;
+        }
+    }
+
+    double percent = 0;
+    if (source != nullptr) {
+        int curCapacity;
+//        auto cr = CFDictionaryGetValue(source, CFSTR(kIOPSCurrentCapacityKey));
+//        auto v = CFNumberGetValue((CFNumberRef)cr, kCFNumberIntType, &curCapacity);
+        CFNumberGetValue((CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSCurrentCapacityKey)), kCFNumberIntType, &curCapacity);
+
+        int maxCapacity;
+        CFNumberGetValue((CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSMaxCapacityKey)), kCFNumberIntType, &maxCapacity);
+
+        percent = curCapacity / (double) maxCapacity * 100.f;
+    }
+
+    CFRelease(sourceInfo);
+    CFRelease(sourceList);
+    return percent;
+}
+
 void Platform::update() {
+    foo();
     CFTypeRef r = IOPSCopyPowerSourcesInfo();
+    CFArrayRef a = IOPSCopyPowerSourcesList(r);
+    CFDictionaryRef d = IOPSGetPowerSourceDescription(a, kIOPSPowerAdapterWattsKey);
+    CFRelease(a);
     IOPSGetProvidingPowerSourceType(r);
-    CFStringGetCString( IOPSGetProvidingPowerSourceType(r), batteryInfo.powerSource, 128, kCFStringEncodingUTF8);
+    CFStringGetCString(IOPSGetProvidingPowerSourceType(r), batteryInfo.powerSource, 128, kCFStringEncodingUTF8);
 //    strcpy(&batteryInfo.powerSource[0], CFStringGetStringPtr(IOPSGetProvidingPowerSourceType(r)));
     switch (IOPSGetBatteryWarningLevel()) {
         case kIOPSLowBatteryWarningNone:

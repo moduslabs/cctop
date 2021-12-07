@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -24,7 +24,7 @@
  * See copyright info in iostat.txt.
  */
 
-#include "systat.h"
+#include "cctop.h"
 
 Memory::Memory() {
     this->page_size = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));

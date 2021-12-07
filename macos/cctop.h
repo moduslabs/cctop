@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -20,7 +20,7 @@
 #ifndef SYSTAT_H
 #define SYSTAT_H
 
-// global header file for systat program
+// global header file for cctop program
 
 #include <net/if.h>
 #include <net/if_dl.h>

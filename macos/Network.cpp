@@ -7,7 +7,7 @@
  */
 
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -25,7 +25,7 @@
  *
  * To exit, hit ^C.
  */
-#include "systat.h"
+#include "cctop.h"
 
 Network network;
 

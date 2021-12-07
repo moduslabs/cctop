@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -26,7 +26,7 @@
 #ifndef SYSTAT_DISK_H
 #define SYSTAT_DISK_H
 
-#include "systat.h"
+#include "cctop.h"
 
 #define IOKIT 1 /* to get io_name_t in device_types.h */
 

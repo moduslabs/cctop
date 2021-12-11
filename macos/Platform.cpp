@@ -81,7 +81,7 @@ Platform::Platform() {
  * IOPSGetPowerSourceDescription() to pull out a dictionary (see IOPSKeys.h for the
  * contents of the dictionary).
  */
-static double foo() {
+static double updateBattery() {
     CFTypeRef sourceInfo = IOPSCopyPowerSourcesInfo();
     CFArrayRef sourceList = IOPSCopyPowerSourcesList(sourceInfo);
 
@@ -103,10 +103,12 @@ static double foo() {
         int curCapacity;
 //        auto cr = CFDictionaryGetValue(source, CFSTR(kIOPSCurrentCapacityKey));
 //        auto v = CFNumberGetValue((CFNumberRef)cr, kCFNumberIntType, &curCapacity);
-        CFNumberGetValue((CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSCurrentCapacityKey)), kCFNumberIntType, &curCapacity);
+        CFNumberGetValue((CFNumberRef) CFDictionaryGetValue(source, CFSTR(kIOPSCurrentCapacityKey)), kCFNumberIntType,
+                         &curCapacity);
 
         int maxCapacity;
-        CFNumberGetValue((CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSMaxCapacityKey)), kCFNumberIntType, &maxCapacity);
+        CFNumberGetValue((CFNumberRef) CFDictionaryGetValue(source, CFSTR(kIOPSMaxCapacityKey)), kCFNumberIntType,
+                         &maxCapacity);
 
         percent = curCapacity / (double) maxCapacity * 100.f;
     }
@@ -117,7 +119,7 @@ static double foo() {
 }
 
 void Platform::update() {
-    foo();
+    batteryInfo.chargePct = updateBattery();
     CFTypeRef r = IOPSCopyPowerSourcesInfo();
     CFArrayRef a = IOPSCopyPowerSourcesList(r);
     CFDictionaryRef d = IOPSGetPowerSourceDescription(a, kIOPSPowerAdapterWattsKey);
@@ -158,12 +160,12 @@ void Platform::update() {
 
     this->kp = (kinfo_proc *) buf;
     this->num_processes = length / sizeof(kinfo_proc);
-    for (int i = 0; i < this->num_processes; i++) {
-        kinfo_proc *p = &this->kp[i];
-        if (p->kp_proc.p_pctcpu > 0) {
-            printf("p");
-        }
-    }
+//    for (int i = 0; i < this->num_processes; i++) {
+//        kinfo_proc *p = &this->kp[i];
+//        if (p->kp_proc.p_pctcpu > 0) {
+//            printf("p");
+//        }
+//    }
 }
 
 uint16_t Platform::print(bool test) {
@@ -177,18 +179,17 @@ uint16_t Platform::print(bool test) {
     char s[1000];
     strftime(s, 1000, "%c", p);
 
-    // compute uptime
+    // compute current_uptime
     const int secs_per_day = 60 * 60 * 24, secs_per_hour = 60 * 60;
-    int uptime = this->uptime;
-    int days = uptime / secs_per_day;
-    uptime -= days * secs_per_day;
-    int hours = uptime / secs_per_hour;
-    int minutes = (uptime - hours * secs_per_hour) / 60;
+    uint64_t current_uptime = uptime;
+    uint64_t days = current_uptime / secs_per_day;
+    current_uptime -= days * secs_per_day;
+    uint64_t hours = current_uptime / secs_per_hour;
+    uint64_t minutes = (current_uptime - hours * secs_per_hour) / 60;
 
     const int width = console.width ? console.width : 80;
     char out[width + 1];
-    sprintf(out, "cctop/%d [%s/%s %s]", this->refresh_time, this->hostname,
-            this->sysname, this->release);
+    sprintf(out, "cctop/%d [%s/%s %s]", refresh_time, hostname, sysname, release);
     size_t fill = width - strlen(out) - strlen(s) - 1;
     char *ptr = &out[strlen(out)];
     while (fill > 0) {
@@ -211,7 +212,24 @@ uint16_t Platform::print(bool test) {
                   this->loadavg[2]);
     console.clear_eol();
     console.newline();
-    return 3;
+    console.mode_bold(true);
+    console.print("Power Source: ");
+    console.mode_clear();
+    console.print("%s ", batteryInfo.powerSource);
+    console.mode_bold(true);
+    console.print("Battery: ");
+    console.mode_clear();
+    console.print("%.0f%% ", batteryInfo.chargePct);
+    console.gauge(20, batteryInfo.chargePct);
+    if (batteryInfo.timeRemaining > 0) {
+        console.print(" %.1f hours remaining", batteryInfo.hoursRemaining());
+    }
+    else if (batteryInfo.timeRemaining == -1) {
+        console.print(" Caluclating time remaining");
+    }
+    console.clear_eol();
+    console.newline();
+    return 4;
 }
 
 Platform platform;

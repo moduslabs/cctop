@@ -47,6 +47,7 @@ private:
 
 public:
     Console();
+
     ~Console();
 
 public:
@@ -63,7 +64,7 @@ public:
     void show_cursor(bool on = true);
 
     // clear screen
-    void clear();
+    void clear(bool endOfScreen = false);
 
     // reset all modes and colors, enable cursor
     void reset();
@@ -93,6 +94,9 @@ public:
     // emit a newline
     void newline();
 
+    // print a gauge, representing the specified percentage
+    void gauge(int width, double pct, char fill = '>');
+
 private:
     void set_mode(uint8_t attr, bool on);
 
@@ -114,6 +118,7 @@ public:
 
     // turn on/off concealed
     void mode_concealed(bool on = true);
+
 private:
     void set_color(uint8_t color, bool on);
 
@@ -123,44 +128,61 @@ public:
 
     // set true color foreground color
     void fg_rgb(uint8_t red, uint8_t green, uint8_t blue);
+
     // set true color background color
     void bg_rgb(uint8_t red, uint8_t green, uint8_t blue);
 
     // reset foreground color to default
     void fg_clear();
+
     // use black as foreground color
     void fg_black();
+
     // use red as foreground color
     void fg_red();
+
     // use green as foreground color
     void fg_green();
+
     // use yellow as foreground color
     void fg_yellow();
+
     // use blue as foreground color
     void fg_blue();
+
     // use magenta as foreground color
     void fg_magenta();
+
     // use cyan as foreground color
     void fg_cyan();
+
     // use white as foreground color
     void fg_white();
 
     // reset foreground color to default
     void bg_clear();
+
     // use black as background color
     void bg_black();
+
     // use red as background color
     void bg_red();
+
     // use green as background color
     void bg_green();
+
     // use yellow as background color
     void bg_yellow();
+
     // use blue as background color
     void bg_blue();
+
     // use magenta as background color
     void bg_magenta();
+
     // use cyan as background color
     void bg_cyan();
+
     // use white as background color
     void bg_white();
 };

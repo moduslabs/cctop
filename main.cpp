@@ -96,10 +96,13 @@ int main() {
         console.moveTo(1, 1);
 
         platform.update();
+        console.show_cursor(false);
         platform.print(false);
         console.newline();
 
         processor.update();
+
+        console.show_cursor(false);
         processor.print(false);
         console.newline();
 
@@ -111,11 +114,15 @@ int main() {
         disk.print(false);
         console.newline();
 
+
         network.update();
+        console.show_cursor(false);
         network.print(false);
 //        wprintf(L"%p %lc\n", b, b);
         processList.update();
         processList.print(false);
+        console.clear(true);
+        console.show_cursor(false);
 //        wprintf(L"%p %lc\n", b, b);
         sleep(1);
     }

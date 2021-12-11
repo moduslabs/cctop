@@ -25,6 +25,7 @@
 
 class BatteryInfo {
 public:
+    double chargePct;
     char powerSource[128];
     enum {
         WARNING_NONE = 1, // battery is not in low level state

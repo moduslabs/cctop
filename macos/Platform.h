@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -23,22 +23,49 @@
 
 #include <sys/sysctl.h>
 
+class BatteryInfo {
+public:
+    double chargePct;
+    char powerSource[128];
+    enum {
+        WARNING_NONE = 1, // battery is not in low level state
+        WARNING_EARLY = 2, // battery has less than 20 minutes remaining
+        WARNING_FINAL = 3, // battery has less than 10 minutes remaining
+    } warningLevel;
+    enum {
+        POWER_PLUGGED_IN,
+        POWER_UNPLUGGED, // recently unplugged
+        POWER_BATTERY,
+    } powerState;
+public:
+    double timeRemaining; // in seconds
+    double minutesRemaining() const {
+        return timeRemaining / 60.;
+    }
+
+    double hoursRemaining() const {
+        return minutesRemaining() / 60;
+    }
+};
+
 class Platform {
 public:
-  char *hostname, *sysname, *release, *version, *machine;
-  kinfo_proc *kp;
-  uint64_t uptime, idle;
-  double loadavg[3];
-  uint64_t num_processes, cpu_count;
-  uint16_t refresh_time;
-  uint8_t pad[6];
+    char *hostname, *sysname, *release, *version, *machine;
+    BatteryInfo batteryInfo;
+    kinfo_proc *kp;
+    uint64_t uptime, idle;
+    double loadavg[3];
+    uint64_t num_processes, cpu_count;
+    uint16_t refresh_time;
+    uint8_t pad[6];
 
 public:
-  Platform();
+    Platform();
 
 public:
-  void update();
-  uint16_t print(bool test);
+    void update();
+
+    uint16_t print(bool test);
 };
 
 extern Platform platform;

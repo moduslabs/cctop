@@ -7,7 +7,7 @@
  */
 
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *

@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -21,7 +21,7 @@
 #ifndef SYSTAT_VIRTUALMEMORY_H
 #define SYSTAT_VIRTUALMEMORY_H
 
-#include "systat.h"
+#include "cctop.h"
 
 struct VMStats {
   uint64_t pageins, pageouts, swapins, swapouts;

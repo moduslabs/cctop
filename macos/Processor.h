@@ -1,5 +1,5 @@
 /*
- * systat for MacOS
+ * cctop for MacOS
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -20,7 +20,7 @@
 #ifndef C_CPU_H
 #define C_CPU_H
 
-#include "systat.h"
+#include "cctop.h"
 
 const int CPU_HISTORY_SIZE = 20;
 

@@ -1,5 +1,5 @@
 /*
- * systat for MacOS and Linux
+ * cctop for MacOS and Linux
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *
@@ -45,7 +45,6 @@ const uint8_t ATTR_BLINK = 5;
 const uint8_t ATTR_INVERSE = 7;
 const uint8_t ATTR_CONCEALED = 8;
 
-
 // colors
 const uint8_t FG_BLACK = 30;
 const uint8_t FG_RED = 31;
@@ -73,6 +72,11 @@ void resize_handler(int sig) {
     }
 }
 
+void exit_handler(int sig) {
+    console.show_cursor(true);
+    exit(0);
+}
+
 Console::Console() {
     this->aborting = false;
 #if DEBUG == 0
@@ -80,8 +84,10 @@ Console::Console() {
     this->reset();
     this->clear();
     // install sigwinch handler (window resize signal)
-    signal(SIGWINCH, resize_handler);
 #endif
+    signal(SIGWINCH, resize_handler);
+    signal(SIGINT, exit_handler);
+    signal(SIGTERM, exit_handler);
 }
 
 Console::~Console() {
@@ -129,8 +135,8 @@ void Console::show_cursor(bool on) {
 }
 
 /** @public **/
-void Console::clear() {
-    printf("%c[2J", ESC);
+void Console::clear(bool endOfScreen) {
+    printf("%c[%dJ", ESC, endOfScreen ? 0 : 2);
     fflush(stdout);
     this->moveTo(0, 0);
 }
@@ -405,6 +411,20 @@ void Console::wprintln(const wchar_t *fmt, ...) {
     this->clear_eol();
     fputs("\n", stdout);
     fflush(stdout);
+}
+
+void Console::gauge(int aWidth, double pct, char fill) {
+    this->print("[");
+    int toFill = aWidth * pct/100.,
+            i;
+    for (i = 0; i < toFill; i++) {
+        this->print("%c", fill);
+    }
+    while (i<aWidth) {
+        this->print(" ");
+        i++;
+    }
+    this->print("]");
 }
 
 void Console::newline() {

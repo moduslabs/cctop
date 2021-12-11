@@ -1,5 +1,5 @@
 /*
- * systat for MacOS and Linux
+ * cctop for MacOS and Linux
  *
  * Programmed by Mike Schwartz <mike@moduscreate.com>
  *

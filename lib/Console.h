@@ -24,26 +24,33 @@
 #ifndef C_CONSOLE_H
 #define C_CONSOLE_H
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <sys/ioctl.h>
+#include <termios.h>
 
 class Console {
 public:
     // console window width and height
-    uint16_t width, height;
+    uint16_t width{}, height{};
+    struct termios initial_termios{0};
 
 private:
-    bool aborting, pad;
-// ciuror location
-    uint16_t row, col;
+    bool aborting{}, pad{};
+
+    uint16_t row{}, col{}; // cursor location
 
     // modes
-    bool bold, underscore, blink, inverse, concealed;
-    bool cursor_hidden;
+    bool bold{false},
+            underscore{false},
+            blink{false},
+            inverse{false},
+            concealed{false},
+            cursor_hidden{false},
+            raw_input{false};
 
     // colors
-    uint8_t background, foreground;
+    uint8_t background{}, foreground{};
 
 public:
     Console();
@@ -54,10 +61,17 @@ public:
     // print a message and exit cleanly with exit code 1
     void abort(const char *fmt, ...);
 
+    void cleanup();
+
 public:
     // Call to update Console's notion of width and height.
     // Also clears the screen/window.
     void resize();
+
+public:
+    void raw(bool on = true);
+
+    bool getch(int *c, bool timeout = false);
 
 public:
     // enable/disable cursor
@@ -92,10 +106,12 @@ public:
     // print line inverse, with newline
 
     // emit a newline
-    void newline();
+    void newline(bool erase = true);
 
     // print a gauge, representing the specified percentage
     void gauge(int width, double pct, char fill = '>');
+
+    void window(int aRow, int aCol, int aWidth, int aHeight, const char *title = "Untitled");
 
 private:
     void set_mode(uint8_t attr, bool on);

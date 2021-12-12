@@ -20,7 +20,9 @@
 #ifndef C_CPU_H
 #define C_CPU_H
 
-#include "cctop.h"
+#include "../cctop.h"
+#include <map>
+#include <string>
 
 const int CPU_HISTORY_SIZE = 20;
 
@@ -42,7 +44,6 @@ public:
     std::map<std::string, CPU *> last, current, delta;
     uint64_t total_ticks{};
     int num_cores;
-    bool condensed, pad[3];
 
 public:
     Processor();
@@ -51,12 +52,12 @@ public:
     // returns # of processors
     uint16_t read(std::map<std::string, CPU *> &m);
 
-    void copy(std::map<std::string, CPU *> &dst,
+    static void copy(std::map<std::string, CPU *> &dst,
               std::map<std::string, CPU *> &src);
 
     void update();
 
-    uint16_t print(bool test);
+    uint16_t print();
 };
 
 extern Processor processor;

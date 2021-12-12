@@ -19,7 +19,7 @@
  */
 
 #include "VirtualMemory.h"
-
+#if 0
 VirtualMemory virtual_memory;
 
 void VMStats::diff(VMStats *newer, VMStats *older) {
@@ -71,3 +71,4 @@ uint16_t VirtualMemory::print(bool test) {
                   this->current.swapouts);
   return 4;
 }
+#endif

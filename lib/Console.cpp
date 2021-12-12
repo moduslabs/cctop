@@ -26,15 +26,19 @@
 // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
 
 #include "Console.h"
-#include <wchar.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "Options.h"
+#include <cwchar>
+#include <csignal>
+#include <cstdarg>
+#include <cstdlib>
+#include <cstdio>
 #include <unistd.h>
 #include <termios.h>
-
-int wprintf(const wchar_t *format, ...);
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 const char ESC = 0x1b;
 
@@ -63,6 +67,12 @@ const uint8_t BG_MAGENTA = 45;
 const uint8_t BG_CYAN = 46;
 const uint8_t BG_WHITE = 47;
 
+static long millis() {
+    timeval time;
+    gettimeofday(&time, nullptr);
+    return (time.tv_sec * 1000) + (time.tv_usec / 1000);
+}
+
 // window size/change handling
 void resize_handler(int sig) {
     if (sig == SIGWINCH) {
@@ -73,54 +83,112 @@ void resize_handler(int sig) {
 }
 
 void exit_handler(int sig) {
-    console.show_cursor(true);
+    console.cleanup();
+    if (sig == SIGINT) {
+        printf("^C\n");
+    } else if (sig == SIGTERM) {
+        printf("KILLED\n");
+    }
     exit(0);
+}
+
+void Console::cleanup() {
+    if (!this->aborting) {
+        this->reset();
+        this->clear();
+        this->show_cursor(true);
+        tcsetattr(0, TCSANOW, &initial_termios);
+    }
+    this->aborting = true;
 }
 
 Console::Console() {
     this->aborting = false;
-#if DEBUG == 0
     this->resize();
     this->reset();
     this->clear();
     // install sigwinch handler (window resize signal)
-#endif
     signal(SIGWINCH, resize_handler);
     signal(SIGINT, exit_handler);
     signal(SIGTERM, exit_handler);
+
+    tcgetattr(0, &initial_termios);
 }
 
 Console::~Console() {
-#if DEBUG == 0
-    if (!this->aborting) {
-        this->reset();
-        this->clear();
-    }
-#endif
-    this->show_cursor(true);
+//    printf("destruct Console\n");
+    this->cleanup();
 }
 
 void Console::abort(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
-    this->aborting = true;
-#if DEBUG == 0
-    this->reset();
-    this->clear();
-#endif
-    this->show_cursor(true);
+    this->cleanup();
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fflush(stdout);
 }
 
 void Console::resize() {
-    struct winsize size;
+    winsize size{0};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
     this->width = size.ws_col;
     this->height = size.ws_row;
     this->clear();
+}
+
+void Console::raw(bool on) {
+    termios t{0};
+    tcgetattr(0, &t);
+    if (on) {
+        // disable buffering and echo and signals (^c, etc.)
+        t.c_lflag &= ~(ICANON | ECHO | ISIG);
+        tcsetattr(0, TCSANOW, &t);
+    } else {
+        // enable buffering and echo and signals (^c, etc.)
+        t.c_lflag |= (ICANON | ECHO | ISIG);
+    }
+    this->raw_input = on;
+}
+
+bool Console::getch(int *c, bool timeout) {
+    char cc = '\0';
+    if (timeout) {
+        long when = millis() + options.read_timeout;
+        while (millis() < when) {
+            fd_set set;
+            FD_ZERO(&set);
+            FD_SET(0, &set);
+
+            timeval t{};
+            t.tv_sec = 0;
+            t.tv_usec = 100;
+
+            int ret = select(1, &set, nullptr, nullptr, &t);
+            switch (ret) {
+                case -1:
+                    // error occurred
+                    return false;
+                case 0:
+                    // timeout
+                    usleep(100);
+                    continue;
+                default:
+                    if (read(0, &cc, 1) == 1) {
+                        *c = int(cc);
+                        return true;
+                    }
+                    break;
+            }
+        }
+        return false;
+    }
+    if (read(0, &cc, 1) == 1) {
+        *c = int(cc);
+        return true;
+    }
+    return false;
 }
 
 void Console::show_cursor(bool on) {
@@ -150,7 +218,7 @@ void Console::reset() {
 
 /** @public **/
 void Console::clear_eol() {
-    printf("%c[K", ESC);
+    printf("%c[0K", ESC);
     fflush(stdout);
 }
 
@@ -374,9 +442,8 @@ void Console::println(const char *fmt, ...) {
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
-    this->clear_eol();
-    fputs("\n", stdout);
     fflush(stdout);
+    this->newline();
 }
 
 void Console::inverseln(const char *fmt, ...) {
@@ -387,9 +454,9 @@ void Console::inverseln(const char *fmt, ...) {
     console.fg_black();
     vprintf(fmt, ap);
     console.clear_eol();
-    console.mode_clear();
     va_end(ap);
     fputs("\n", stdout);
+    console.mode_clear();
     fflush(stdout);
 }
 
@@ -415,20 +482,58 @@ void Console::wprintln(const wchar_t *fmt, ...) {
 
 void Console::gauge(int aWidth, double pct, char fill) {
     this->print("[");
-    int toFill = aWidth * pct/100.,
+    int toFill = aWidth * pct / 100.,
             i;
     for (i = 0; i < toFill; i++) {
         this->print("%c", fill);
     }
-    while (i<aWidth) {
+    while (i < aWidth) {
         this->print(" ");
         i++;
     }
     this->print("]");
 }
 
-void Console::newline() {
-    this->clear_eol();
+void Console::window(int aRow, int aCol, int aWidth, int aHeight, const char *aTitle) {
+    int w = aWidth - 2;
+    int h = aHeight - 2;
+    int r = aRow;
+
+    // top row
+    moveTo(r++, aCol);
+    wprint(L"%lc", 0x2554);
+    for (int i = 0; i < w; i++) {
+        wprint(L"%lc", 0x2550);
+    }
+    wprint(L"%lc", 0x2557);
+
+    // middle rows
+    for (int hh = 0; hh < h; hh++) {
+        moveTo(r++, aCol);
+        wprint(L"%lc", 0x2551);
+        for (int i = 0; i < w; i++) {
+            wprint(L"%lc", ' ');
+        }
+        wprint(L"%lc", 0x2551);
+    }
+    // bottom row
+    moveTo(r++, aCol);
+    wprint(L"%lc", 0x255a);
+    for (int i = 0; i < w; i++) {
+        wprint(L"%lc", 0x2550);
+    }
+    wprint(L"%lc", 0x255d);
+
+    if (aTitle) {
+        moveTo(aRow, aCol + 2);
+        print("[%s]", aTitle);
+    }
+}
+
+void Console::newline(bool erase) {
+    if (erase) {
+        this->clear_eol();
+    }
     fputs("\n", stdout);
     fflush(stdout);
 }

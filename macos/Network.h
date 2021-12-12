@@ -54,14 +54,14 @@ public:
 protected:
   void read(std::map<std::string, Interface *> &m);
 
-  void copy(std::map<std::string, Interface *> &src,
+  static void copy(std::map<std::string, Interface *> &src,
             std::map<std::string, Interface *> &dst);
 
 public:
   void update();
 
   // print network stats, unless test is set,  return # lines (would be) printed
-  uint16_t print(bool test);
+  uint16_t print();
 };
 
 extern Network network;

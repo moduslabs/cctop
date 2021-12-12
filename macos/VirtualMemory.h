@@ -21,6 +21,7 @@
 #ifndef SYSTAT_VIRTUALMEMORY_H
 #define SYSTAT_VIRTUALMEMORY_H
 
+#if 0
 #include "cctop.h"
 
 struct VMStats {
@@ -40,5 +41,6 @@ public:
 };
 
 extern VirtualMemory virtual_memory;
+#endif
 
 #endif //SYSTAT_VIRTUALMEMORY_H

@@ -18,7 +18,8 @@
  * To exit, hit ^C.
  */
 
-#include "cctop.h"
+#include "../cctop.h"
+
 #include <libproc.h>
 #include <sys/utsname.h>
 #include <CoreFoundation/CFString.h>
@@ -160,19 +161,12 @@ void Platform::update() {
 
     this->kp = (kinfo_proc *) buf;
     this->num_processes = length / sizeof(kinfo_proc);
-//    for (int i = 0; i < this->num_processes; i++) {
-//        kinfo_proc *p = &this->kp[i];
-//        if (p->kp_proc.p_pctcpu > 0) {
-//            printf("p");
-//        }
-//    }
 }
 
-uint16_t Platform::print(bool test) {
+uint16_t Platform::print() {
+    uint16_t count = 0;
+
     this->uptime = get_uptime();
-    if (test) {
-        return 3;
-    }
     time_t now = time(0);
     struct tm *p = localtime(&now);
 
@@ -189,7 +183,7 @@ uint16_t Platform::print(bool test) {
 
     const int width = console.width ? console.width : 80;
     char out[width + 1];
-    sprintf(out, "cctop/%d [%s/%s %s]", refresh_time, hostname, sysname, release);
+    sprintf(out, " cctop/%llu [%s/%s %s]", options.read_timeout/1000, hostname, sysname, release);
     size_t fill = width - strlen(out) - strlen(s) - 1;
     char *ptr = &out[strlen(out)];
     while (fill > 0) {
@@ -198,6 +192,8 @@ uint16_t Platform::print(bool test) {
     }
     strcat(ptr, s);
     console.inverseln(out);
+    count++;
+
     //  console.inverseln("cctop/%d [%s] %s/%s(%s) %s", 1, this->hostname,
     //  this->sysname, this->release, this->machine, s);
 
@@ -212,6 +208,7 @@ uint16_t Platform::print(bool test) {
                   this->loadavg[2]);
     console.clear_eol();
     console.newline();
+    count++;
     console.mode_bold(true);
     console.print("Power Source: ");
     console.mode_clear();
@@ -223,13 +220,13 @@ uint16_t Platform::print(bool test) {
     console.gauge(20, batteryInfo.chargePct);
     if (batteryInfo.timeRemaining > 0) {
         console.print(" %.1f hours remaining", batteryInfo.hoursRemaining());
-    }
-    else if (batteryInfo.timeRemaining == -1) {
+    } else if (batteryInfo.timeRemaining == -1) {
         console.print(" Caluclating time remaining");
     }
     console.clear_eol();
     console.newline();
-    return 4;
+    count++;
+    return count;
 }
 
 Platform platform;

@@ -2,12 +2,8 @@
 // Created by Michael Schwartz on 11/23/21.
 //
 
-#include "ProcessList.h"
-#include "Processor.h"
-#include "../lib/Console.h"
+#include "../cctop.h"
 #include <libproc.h>
-#include <pwd.h>
-#include <grp.h>
 #include <vector>
 #include <utility>
 
@@ -82,8 +78,7 @@ void ProcessList::update() {
         p->delta_cpu = p->delta_system + p->delta_user;
         if (processor.total_ticks > 0) {
             p->pct_cpu = double(p->delta_cpu) / double(processor.total_ticks);
-        }
-        else {
+        } else {
             p->pct_cpu = 0.;
         }
         p->total_user = info.pti_total_user;
@@ -117,10 +112,11 @@ void ProcessList::update() {
 }
 
 static bool cmp(Process *a, Process *b) {
-   return a->pct_cpu > b->pct_cpu;
+    return a->pct_cpu > b->pct_cpu;
 }
 
-void ProcessList::print(bool test) {
+uint16_t ProcessList::print() {
+    uint16_t count = 0;
     std::vector<Process *> sorted, to_remove;
     // Loop through our map of processes (pid is key, value is struct).
     //
@@ -149,20 +145,26 @@ void ProcessList::print(bool test) {
 
     // sort away
     std::sort(sorted.begin(), sorted.end(), cmp);
-    int count = 0;
-    console.println("");
-    console.inverseln("%6.6s %6.6s %-16.16s %-32.32s", "PID", "CPU%", "USER", "NAME");
+    int printed = 0;
+    console.inverseln(" %6.6s %6.6s %-16.16s %-32.32s", "[P]ID", "CPU%", "USER", "NAME");
+    count++;
     for (auto &it: sorted) {
         auto p = it;
 //        if (p->ppid > 1) continue;
-        count++;
+        printed++;
         auto pass = username(p->ruid);
         auto grp = groupname(p->rgid);
 
-        console.println("%6d %6.1f %-16.16s %-32.32s", p->pid,    p->pct_cpu * 10000, pass, p->name );
-        if (count > 10) break;
+        console.println(" %6d %6.1f %-16.16s %-32.32s", p->pid, p->pct_cpu * 10000, pass, p->name);
+        count++;
+        if (options.condenseProcesses) {
+            break;
+        }
+        if (printed > 10) break;
     }
-    console.println("%ld processes, %d removed", sorted.size(), remove_count);
+    console.println("  %ld processes", sorted.size());
+    count++;
+    return count;
 }
 
 ProcessList processList;

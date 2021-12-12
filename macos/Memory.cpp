@@ -24,7 +24,9 @@
  * See copyright info in iostat.txt.
  */
 
-#include "cctop.h"
+#include "../cctop.h"
+#include <mach/mach.h>
+#include <unistd.h>
 
 Memory::Memory() {
     this->page_size = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
@@ -93,31 +95,49 @@ void Memory::update() {
     delta->swap_free = current->swap_free - last->swap_free;
 }
 
-uint16_t Memory::print(bool test) {
-    if (!test) {
-        console.inverseln("%-12s %9s %9s %9s %9s %9s", "MEMORY", "Total", "Used", "Free", "Wired", "Cached");
+uint16_t Memory::print() const {
+    uint16_t count = 0;
+    console.inverseln("%-12s %9s %9s %9s %9s %9s",
+                      "  [M]EMORY", "Total", "Used", "Free", "Wired", "Cached");
+    count++;
 
-        console.println("%-12s %'9lld %'9lld %'9lld %'9lld %'9lld", "Real", this->current.memory_size / 1024 / 1024,
-                        this->current.memory_used / 1024 / 1024, this->current.memory_free / 1024 / 1024,
-                        this->current.wire_count,
-                        this->page_size * (this->current.external_page_count + this->current.purgeable_count)/1024/1024);
-        console.println("%-12s %'9lld %'9lld %'9lld", "Swap", this->current.swap_size / 1024 / 1024,
+    console.println("  %-12s %'9lld %'9lld %'9lld %'9lld %'9lld",
+                    "Real",
+                    this->current.memory_size / 1024 / 1024,
+                    this->current.memory_used / 1024 / 1024, this->current.memory_free / 1024 / 1024,
+                    this->current.wire_count,
+                    this->page_size * (this->current.external_page_count + this->current.purgeable_count) /
+                    1024 /
+                    1024);
+    count++;
+
+    if (!options.condenseMemory) {
+        console.println("  %-12s %'9lld %'9lld %'9lld", "Swap", this->current.swap_size / 1024 / 1024,
                         this->current.swap_used / 1024 / 1024, this->current.swap_free / 1024 / 1024);
-        console.newline();
-        console.inverseln("%-16s %19s %22s", "VIRTUAL MEMORY", "  IN Current OUT  ", "  IN Aggregate OUT ");
-//    console.println("%-16s %9s %9s %9s %9s", "", "IN", "OUT", "IN", "OUT");
-        console.print("%-12s %'9lld   %'9lld %'9lld     %'9lld\n", "Page",
-                      this->delta.pageins / 1024 / 1024,
-                      this->delta.pageouts / 1024 / 1024,
-                      this->current.pageins / 1024 / 1024,
-                      this->current.pageouts / 10924 / 1024);
-        console.print("%-12s %'9lld   %'9lld %'9lld     %'9lld\n", "Swap",
-                      this->delta.swapins / 1024 / 1024,
-                      this->delta.swapouts / 1024 / 1024,
-                      this->current.swapins / 1024 / 1024,
-                      this->current.swapouts / 10924 / 1024);
     }
-    return 3; // # lines printed
+    return count; // # lines printed
+}
+
+uint16_t Memory::printVirtualMemory() {
+    uint16_t count = 0;
+
+    console.inverseln("  %-16s %19s %22s", "[V]IRTUAL MEMORY", "  IN Current OUT  ", "  IN Aggregate OUT ");
+    count++;
+    if (!options.condenseVirtualMemory) {
+        console.println("  %-12s %'9lld   %'9lld %'9lld     %'9lld", "Page",
+                        this->delta.pageins / 1024 / 1024,
+                        this->delta.pageouts / 1024 / 1024,
+                        this->current.pageins / 1024 / 1024,
+                        this->current.pageouts / 10924 / 1024);
+        count++;
+        console.println("  %-12s %'9lld   %'9lld %'9lld     %'9lld", "Swap",
+                        this->delta.swapins / 1024 / 1024,
+                        this->delta.swapouts / 1024 / 1024,
+                        this->current.swapins / 1024 / 1024,
+                        this->current.swapouts / 10924 / 1024);
+        count++;
+    }
+    return count;
 }
 
 Memory memory;

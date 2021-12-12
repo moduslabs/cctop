@@ -17,11 +17,8 @@
  *
  * To exit, hit ^C.
  */
-#include "cctop.h"
-#include <libproc.h>
-#include <pwd.h>
-#include <uuid/uuid.h>
-
+#include "../cctop.h"
+#include <mach/mach_host.h>
 
 //    2581 ▁
 //    2582 ▂
@@ -182,7 +179,6 @@ void CPU::print() {
 }
 
 Processor::Processor() {
-    this->condensed = false;
     this->num_cores = this->read(this->current);
     this->copy(this->last, this->current);
     this->copy(this->delta, this->current);
@@ -195,7 +191,7 @@ struct cpusample {
     uint64_t totalIdleTime;
 };
 
-void sample(struct cpusample *sample) {
+static void sample(struct cpusample *sample) {
     kern_return_t kr;
     mach_msg_type_number_t count;
     host_cpu_load_info_data_t r_load;
@@ -214,9 +210,9 @@ void sample(struct cpusample *sample) {
     sample->totalIdleTime = r_load.cpu_ticks[CPU_STATE_IDLE];
 }
 
-//│                                                                   ⢠⣿⣿                              │CPU ■■■■■■■■■■  26% ⡀⡀⡀⡀⡀   0°C│ │
+//                                                      ⢠⣿⣿                              │CPU ■■■■■■■■■■  26% ⡀⡀⡀⡀⡀   0°C│ │
 uint16_t Processor::read(std::map<std::string, CPU *> &m) {
-    struct cpusample sam;
+    cpusample sam;
     sample(&sam);
     processor_cpu_load_info_t cpuLoad;
     mach_msg_type_number_t processorMsgCount;
@@ -286,30 +282,25 @@ void Processor::update() {
     cpu->idle /= this->num_cores;
 }
 
-uint16_t Processor::print(bool test) {
+uint16_t Processor::print() {
     uint16_t count = 0;
-    if (!test) {
-        console.inverseln("  %-6s %7s %7s %7s %7s %7s ", "CPUS", "USE", "User",
-                          "System", "Nice", "Idle");
-    }
+    CPU *cpu;
+
+    console.inverseln("  %-6s %7s %7s %7s %7s %7s ", "[C]PUS", "USE", "User",
+                      "System", "Nice", "Idle");
     count++;
 
-    CPU *cpu = this->delta["CPU"];
-    if (!test) {
-        cpu->print();
-    }
+    cpu = this->delta["CPU"];
+    cpu->print();
     count++;
-    if (this->condensed) {
-        return count;
-    }
-    for (uint16_t i = 0; i < this->num_cores; i++) {
-        char name[32];
-        sprintf(name, "CPU%d", i);
-        CPU *cpu = this->delta[name];
-        if (!test) {
+    if (!options.condenseCPU) {
+        for (int i = 0; i < this->num_cores; i++) {
+            char name[32];
+            sprintf(name, "CPU%d", i);
+            cpu = this->delta[name];
             cpu->print();
+            count++;
         }
-        count++;
     }
     return count;
 }

@@ -26,7 +26,7 @@
 #ifndef SYSTAT_DISK_H
 #define SYSTAT_DISK_H
 
-#include "cctop.h"
+#include "../cctop.h"
 
 #define IOKIT 1 /* to get io_name_t in device_types.h */
 
@@ -67,7 +67,7 @@ public:
 protected:
   uint16_t read(std::map<std::string, DiskStats *> &m);
 
-  void copy(std::map<std::string, DiskStats *> &dst,
+  static void copy(std::map<std::string, DiskStats *> &dst,
             std::map<std::string, DiskStats *> &src);
 
 public:
@@ -76,7 +76,7 @@ public:
 public:
   uint16_t update();
 
-  uint16_t print(bool test);
+  uint16_t print();
 };
 
 extern Disk disk;

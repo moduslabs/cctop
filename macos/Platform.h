@@ -65,7 +65,7 @@ public:
 public:
     void update();
 
-    uint16_t print(bool test);
+    uint16_t print();
 };
 
 extern Platform platform;

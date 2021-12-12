@@ -71,7 +71,7 @@ public:
 public:
     void update();
 
-    void print(bool test);
+    uint16_t print();
 
 protected:
     int64_t touched{0};
@@ -91,6 +91,10 @@ public:
                 strcpy(buf, uids[uid]->c_str());
                 return buf;
             }
+        }
+        else {
+            strcpy(buf, uids[uid]->c_str());
+            return buf;
         }
         sprintf(buf, "%d", uid);
         return buf;

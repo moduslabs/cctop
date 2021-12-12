@@ -17,7 +17,7 @@ add_executable (cctop
         macos/Platform.cpp macos/Platform.h
         macos/Processor.cpp macos/Processor.h
         macos/VirtualMemory.cpp macos/VirtualMemory.h
-        macos/ProcessList.cpp macos/ProcessList.h macos/Battery.cpp macos/Battery.h)
+        macos/ProcessList.cpp macos/ProcessList.h macos/Battery.cpp macos/Battery.h lib/Options.cpp lib/Options.h lib/Help.cpp lib/Help.h cctop.h common/Docker.cpp common/Docker.h)
 
 include(FindPkgConfig)
 pkg_check_modules(CURL libcurl REQUIRED)

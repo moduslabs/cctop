@@ -1,7 +1,9 @@
-//
-// Created by Michael Schwartz on 12/6/21.
-//
-
+/**
+ * Not used currently.
+ *
+ * The implementation should figure out which processes are using power.
+ */
+#if 0
 #include "Battery.h"
 #include <mach/mach_init.h>
 #include <mach/task.h>
@@ -33,8 +35,9 @@ void Battery::update() {
     printf("here");
 }
 
-void Battery::print(bool test) {
+void Battery::print() {
 
 }
 
 Battery battery;
+#endif

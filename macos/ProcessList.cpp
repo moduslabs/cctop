@@ -155,7 +155,7 @@ uint16_t ProcessList::print() {
         auto pass = username(p->ruid);
         auto grp = groupname(p->rgid);
 
-        console.println(" %6d %6.1f %-16.16s %-32.32s", p->pid, p->pct_cpu * 10000, pass, p->name);
+        console.println(" %6d %6.1f %-16.16s %-32.32s", p->pid, p->pct_cpu * 1000, pass, p->name);
         count++;
         if (options.condenseProcesses) {
             break;

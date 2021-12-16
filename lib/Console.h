@@ -24,6 +24,7 @@
 #ifndef C_CONSOLE_H
 #define C_CONSOLE_H
 
+#define _XOPEN_SOURCE_EXTENDED
 #include <cstdint>
 #include <cstdio>
 #include <sys/ioctl.h>
@@ -37,6 +38,7 @@ public:
 
 private:
     bool aborting{}, pad{};
+    int current_pair{-1};
 
     uint16_t row{}, col{}; // cursor location
 
@@ -67,11 +69,12 @@ public:
     // Call to update Console's notion of width and height.
     // Also clears the screen/window.
     void resize();
+    void update();
 
 public:
     void raw(bool on = true);
 
-    bool getch(int *c, bool timeout = false);
+    bool read_character(int *c, bool timeout = false);
 
 public:
     // enable/disable cursor
@@ -87,7 +90,7 @@ public:
     void clear_eol();
 
     // address cursor
-    void moveTo(uint16_t row, uint16_t col);
+    void moveTo(uint16_t r, uint16_t c);
 
     // printf style output to terminal
     void print(const char *fmt, ...);
@@ -99,10 +102,10 @@ public:
     void inverseln(const char *fmt, ...);
 
     // wprintf style output to terminal
-    void wprint(const wchar_t *fmt, ...);
+    void wprintf(const wchar_t *fmt, ...);
 
     // printf style output to terminal, with newline
-    void wprintln(const wchar_t *fmt, ...);
+    void wprintfln(const wchar_t *fmt, ...);
     // print line inverse, with newline
 
     // emit a newline
@@ -132,11 +135,11 @@ public:
     // turn on/off inverse
     void mode_inverse(bool on = true);
 
-    // turn on/off concealed
-    void mode_concealed(bool on = true);
-
-private:
-    void set_color(uint8_t color, bool on);
+public:
+    void default_colors();
+    void set_colors(uint8_t fg, uint8_t bg);
+    void set_foreground(uint8_t color);
+    void set_background(uint8_t color);
 
 public:
     // reset foreground/background colors to default

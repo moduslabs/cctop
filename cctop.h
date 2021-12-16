@@ -1,7 +1,16 @@
 #ifndef CCTOP_CCTOP_H
 #define CCTOP_CCTOP_H
 
-#define DEBUG 0
+#define USE_NCURSES
+//#undef USE_NCURSES
+
+// define VERBOSE to enable debug printing
+#define VERBOSE
+//#undef VERBOSE
+// debug print to this file:
+#define DEBUG_LOGFILE "/tmp/cctop.log"
+
+#include "common/Debug.h"
 
 #include "lib/Console.h"
 #include "lib/Options.h"

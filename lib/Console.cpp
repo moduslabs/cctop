@@ -25,7 +25,9 @@
 // TODO: stdin, raw, echo, icanon, etc.
 // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
 
-#include "Console.h"
+#include "../cctop.h"
+//#include "Console.h"
+#include <ncurses.h>
 #include "Options.h"
 #include <cwchar>
 #include <csignal>
@@ -33,21 +35,48 @@
 #include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
-#include <termios.h>
+
+#ifdef USE_NCURSES
 #include <sys/select.h>
-#include <sys/time.h>
+#else
+
+#include <termios.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <ctime>
 
-const char ESC = 0x1b;
+#endif
 
 const uint8_t ATTR_OFF = 0;
 const uint8_t ATTR_BOLD = 1;
 const uint8_t ATTR_UNDERSCORE = 4;
 const uint8_t ATTR_BLINK = 5;
 const uint8_t ATTR_INVERSE = 7;
-const uint8_t ATTR_CONCEALED = 8;
+
+#ifdef USE_NCURSES
+// colors
+const uint8_t FG_BLACK = COLOR_BLACK;
+const uint8_t FG_RED = COLOR_RED;
+const uint8_t FG_GREEN = COLOR_GREEN;
+const uint8_t FG_YELLOW = COLOR_YELLOW;
+const uint8_t FG_BLUE = COLOR_BLUE;
+const uint8_t FG_MAGENTA = COLOR_MAGENTA;
+const uint8_t FG_CYAN = COLOR_CYAN;
+const uint8_t FG_WHITE = COLOR_WHITE;
+const uint8_t BG_BLACK = COLOR_BLACK;
+const uint8_t BG_RED = COLOR_RED;
+const uint8_t BG_GREEN = COLOR_GREEN;
+const uint8_t BG_YELLOW = COLOR_YELLOW;
+const uint8_t BG_BLUE = COLOR_BLUE;
+const uint8_t BG_MAGENTA = COLOR_MAGENTA;
+const uint8_t BG_CYAN = COLOR_CYAN;
+const uint8_t BG_WHITE = COLOR_WHITE;
+
+const uint8_t DEFAULT_BACKGROUND = COLOR_BLACK;
+const uint8_t DEFAULT_FOREGROUND = COLOR_WHITE;
+#else
+const char ESC = 0x1b;
 
 // colors
 const uint8_t FG_BLACK = 30;
@@ -67,8 +96,93 @@ const uint8_t BG_MAGENTA = 45;
 const uint8_t BG_CYAN = 46;
 const uint8_t BG_WHITE = 47;
 
+const uint8_t DEFAULT_BACKGROUND = BG_BLACK;
+const uint8_t DEFAULT_FOREGROUND = FG_WHITE;
+#endif
+
+#ifdef USE_NCURSES
+#if 0
+const int MAX_COLOR_PAIR = 256;
+
+typedef struct {
+    uint8_t fg;
+    uint8_t bg;
+    int count;
+    bool set;
+} ConsolePair;
+
+static ConsolePair allocated_pairs[MAX_COLOR_PAIR] = {0};
+
+static int free_pair(int pair) {
+    if (pair < 1 || pair >= MAX_COLOR_PAIR || !(allocated_pairs[pair].set)) {
+        return ERR;
+    }
+
+    allocated_pairs[pair].set = FALSE;
+    return OK;
+}
+
+static void init_pairs() {
+    int i;
+    ConsolePair *p = allocated_pairs;
+
+    for (i = 0; i < MAX_COLOR_PAIR; i++) {
+        p[i].set = false;
+    }
+}
+
+static int find_pair(uint8_t fg, uint8_t bg) {
+    int i;
+    ConsolePair *p = allocated_pairs;
+
+    for (i = 0; i < MAX_COLOR_PAIR; i++) {
+        if (p[i].set && p[i].fg == fg && p[i].bg == bg) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int _find_oldest_pair() {
+    int i, lowind = 0, lowval = 0;
+    ConsolePair *p = allocated_pairs;
+
+    for (i = 1; i < MAX_COLOR_PAIR; i++) {
+        if (!p[i].set) {
+            return i;
+        }
+
+        if (!lowval || (p[i].count < lowval)) {
+            lowind = i;
+            lowval = p[i].count;
+        }
+    }
+
+    return lowind;
+}
+
+static int alloc_pair(uint8_t fg, uint8_t bg) {
+    int i = find_pair(fg, bg);
+
+    if (-1 == i) {
+        i = _find_oldest_pair();
+
+#ifdef USE_NCURSES
+        if (ERR == init_pair(short(i), fg, bg)) {
+            return -1;
+        }
+#else
+        return i;
+#endif
+    }
+
+    return i;
+}
+#endif
+#endif
+
 static long millis() {
-    timeval time;
+    timeval time{};
     gettimeofday(&time, nullptr);
     return (time.tv_sec * 1000) + (time.tv_usec / 1000);
 }
@@ -92,53 +206,84 @@ void exit_handler(int sig) {
     exit(0);
 }
 
+void Console::update() {
+#ifdef USE_NCURSES
+    refresh();
+#endif
+}
+
 void Console::cleanup() {
-    if (!this->aborting) {
-        this->reset();
-        this->clear();
-        this->show_cursor(true);
+    if (!aborting) {
+#ifndef USE_NCURSES
+        reset();
+        clear();
+        show_cursor(true);
         tcsetattr(0, TCSANOW, &initial_termios);
+#else
+        endwin();
+#endif
     }
-    this->aborting = true;
+    aborting = true;
 }
 
 Console::Console() {
-    this->aborting = false;
-    this->resize();
-    this->reset();
-    this->clear();
+#ifdef USE_NCURSES
+//    init_pairs();
+    initscr();
+    start_color();
+#endif
+    default_colors();
+
+    aborting = false;
+    resize();
+    reset();
+    clear();
+#ifndef USE_NCURSES
     // install sigwinch handler (window resize signal)
     signal(SIGWINCH, resize_handler);
+    tcgetattr(0, &initial_termios);
+#endif
     signal(SIGINT, exit_handler);
     signal(SIGTERM, exit_handler);
 
-    tcgetattr(0, &initial_termios);
 }
 
 Console::~Console() {
-//    printf("destruct Console\n");
-    this->cleanup();
+    cleanup();
 }
 
 void Console::abort(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
-    this->cleanup();
+    cleanup();
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fflush(stdout);
 }
 
 void Console::resize() {
+#ifdef USE_NCURSES
+    width = COLS;
+    height = LINES;
+#else
     winsize size{0};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-    this->width = size.ws_col;
-    this->height = size.ws_row;
-    this->clear();
+    width = 120;
+    height = 120;
+//    this->width = size.ws_col;
+//    this->height = size.ws_row;
+    clear();
+#endif
+    clear();
 }
 
 void Console::raw(bool on) {
+#ifdef USE_NCURSES
+    ::raw();
+    cbreak();
+    keypad(stdscr, true);
+#else
     termios t{0};
     tcgetattr(0, &t);
     if (on) {
@@ -149,13 +294,15 @@ void Console::raw(bool on) {
         // enable buffering and echo and signals (^c, etc.)
         t.c_lflag |= (ICANON | ECHO | ISIG);
     }
-    this->raw_input = on;
+#endif
+    raw_input = on;
 }
 
-bool Console::getch(int *c, bool timeout) {
+bool Console::read_character(int *c, bool timeout) {
+    long now = millis(), when = now + options.read_timeout;
+#ifndef USE_NCURSES
     char cc = '\0';
     if (timeout) {
-        long when = millis() + options.read_timeout;
         while (millis() < when) {
             fd_set set;
             FD_ZERO(&set);
@@ -182,56 +329,143 @@ bool Console::getch(int *c, bool timeout) {
                     break;
             }
         }
-        return false;
     }
-    if (read(0, &cc, 1) == 1) {
-        *c = int(cc);
-        return true;
+#else
+    ::timeout(0);
+
+    while (millis() < when) {
+        int cc = getch();
+        switch (cc) {
+            case 0:
+            case ERR:
+                continue;
+            case KEY_RESIZE:
+                resize();
+                continue;
+            default:
+                *c = cc;
+                return true;
+        }
     }
+#endif
+
     return false;
 }
 
 void Console::show_cursor(bool on) {
+#ifdef USE_NCURSES
     if (on) {
-        fputs("\e[?25h", stdout);
+        echo();
         cursor_hidden = false;
     } else {
-        fputs("\e[?25l", stdout);
+        noecho();
+        cursor_hidden = true;
+    }
+#else
+    if (on) {
+        printf("%c[?25h", ESC, stdout);
+        cursor_hidden = false;
+    } else {
+        printf("%c[?25l", ESC, stdout);
         cursor_hidden = true;
     }
     fflush(stdout);
+#endif
 }
 
 /** @public **/
 void Console::clear(bool endOfScreen) {
+#ifdef USE_NCURSES
+    ::clear();
+#else
     printf("%c[%dJ", ESC, endOfScreen ? 0 : 2);
     fflush(stdout);
-    this->moveTo(0, 0);
+#endif
+    moveTo(0, 0);
 }
 
 /** @public **/
 void Console::reset() {
-    this->set_mode(ATTR_OFF, true);
-    this->background = this->foreground = 0;
-    this->show_cursor(true);
+#ifdef USE_NCURSES
+    attrset(A_NORMAL);
+#else
+    set_mode(ATTR_OFF, true);
+    background = foreground = 0;
+    show_cursor(true);
+#endif
 }
 
 /** @public **/
 void Console::clear_eol() {
+#ifdef USE_NCURSES
+    clrtoeol();
+#else
     printf("%c[0K", ESC);
     fflush(stdout);
+#endif
 }
 
 /** @public **/
-void Console::moveTo(uint16_t row, uint16_t col) {
+void Console::moveTo(uint16_t r, uint16_t c) {
+#ifdef USE_NCURSES
+    move(r, c);
+#else
     printf("%c[%d;%dH", ESC, row, col);
     fflush(stdout);
-    this->row = row;
-    this->col = col;
+#endif
+    row = r;
+    col = c;
 }
 
 /** @private */
 void Console::set_mode(uint8_t attr, bool on) {
+#ifdef USE_NCURSES
+    switch (attr) {
+        case ATTR_OFF:
+            if (on) {
+                attron(A_NORMAL);
+            } else {
+                attroff(A_NORMAL);
+            }
+            bold = underscore = blink = inverse = false;
+            break;
+        case ATTR_BOLD:
+            if (on) {
+                attron(A_BOLD);
+            } else {
+                attroff(A_BOLD);
+            }
+            bold = on;
+            break;
+        case ATTR_UNDERSCORE:
+            if (on) {
+                attron(A_UNDERLINE);
+            } else {
+                attroff(A_UNDERLINE);
+            }
+            underscore = on;
+            break;
+        case ATTR_BLINK:
+            if (on) {
+                attron(A_BLINK);
+            } else {
+                attroff(A_BLINK);
+            }
+            blink = on;
+            break;
+        case ATTR_INVERSE:
+            if (on) {
+                attron(A_REVERSE);
+            } else {
+                attroff(A_REVERSE);
+            }
+            inverse = on;
+            break;
+        default:
+            // shouldn't get here
+            break;
+    }
+#else
     if (on) {
         printf("%c[%dm", ESC, attr);
     } else {
@@ -240,216 +474,253 @@ void Console::set_mode(uint8_t attr, bool on) {
     fflush(stdout);
     switch (attr) {
         case ATTR_OFF:
-            this->bold = this->underscore = this->blink = this->inverse =
-            this->concealed = false;
-            this->show_cursor(!this->cursor_hidden);
+            bold = underscore = blink = inverse =
+            concealed = false;
+            show_cursor(!cursor_hidden);
             break;
         case ATTR_BOLD:
-            this->bold = on;
+            bold = on;
             break;
         case ATTR_UNDERSCORE:
-            this->underscore = on;
+            underscore = on;
             break;
         case ATTR_BLINK:
-            this->blink = on;
+            blink = on;
             break;
         case ATTR_INVERSE:
-            this->inverse = on;
+            inverse = on;
             break;
-        case ATTR_CONCEALED:
-            this->concealed = on;
-            break;
+//        case ATTR_CONCEALED:
+//            concealed = on;
+//            break;
         default:
             break;
     }
+#endif
 }
 
 void Console::mode_clear() {
-    this->set_mode(ATTR_OFF, true);
+#ifndef USE_NCURSES
+    set_mode(ATTR_OFF, true);
     fflush(stdout);
+#endif
 }
 
 /** @public **/
-void Console::mode_bold(bool on) { this->set_mode(ATTR_BOLD, on); }
+void Console::mode_bold(bool on) { set_mode(ATTR_BOLD, on); }
 
 /** @public **/
-void Console::mode_underscore(bool on) { this->set_mode(ATTR_UNDERSCORE, on); }
+void Console::mode_underscore(bool on) { set_mode(ATTR_UNDERSCORE, on); }
 
 /** @public **/
-void Console::mode_blink(bool on) { this->set_mode(ATTR_BLINK, on); }
+void Console::mode_blink(bool on) { set_mode(ATTR_BLINK, on); }
 
 /** @public **/
-void Console::mode_inverse(bool on) { this->set_mode(ATTR_INVERSE, on); }
+void Console::mode_inverse(bool on) { set_mode(ATTR_INVERSE, on); }
 
-/** @public **/
-void Console::mode_concealed(bool on) { this->set_mode(ATTR_CONCEALED, on); }
+void Console::set_colors(uint8_t fg, uint8_t bg) {
+    foreground = fg;
+    background = bg;
+#ifdef USE_NCURSES
+    if (current_pair != -1) {
+        free_pair(current_pair);
+    }
+    current_pair = alloc_pair(foreground, background);
+    attron(COLOR_PAIR(current_pair));
+#else
+    printf("%c[%dm", ESC, foreground);
+    printf("%c[%dm", ESC, background);
+#endif
+}
 
 /** @private */
-void Console::set_color(uint8_t color, bool on) {
-    if (on) {
-        printf("%c[%dm", ESC, color);
-    } else {
-        printf("%c[%dl", ESC, color);
-    }
-    fflush(stdout);
+void Console::set_foreground(uint8_t color) {
+    foreground = color;
+#ifdef USE_NCURSES
+    set_colors(foreground, background);
+#else
+    printf("%c[%dm", ESC, foreground);
+#endif
+}
+
+void Console::set_background(uint8_t color) {
+    background = color;
+#ifdef USE_NCURSES
+    set_colors(foreground, background);
+#else
+    printf("%c[%dm", ESC, background);
+#endif
+}
+
+void Console::default_colors() {
+    set_colors(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
 }
 
 /** @public **/
 void Console::colors_clear() {
-    if (this->background) {
-        this->set_color(background, false);
+    if (background) {
+        set_background(DEFAULT_BACKGROUND);
     }
-    if (this->foreground) {
-        this->set_mode(foreground, false);
+    if (foreground) {
+        set_foreground(DEFAULT_FOREGROUND);
     }
-    this->background = this->foreground = 0;
 }
 
 /** @public **/
 void Console::bg_clear() {
-    if (this->background) {
-        this->set_mode(background, false);
+    if (background) {
+        set_background(DEFAULT_BACKGROUND);
     }
-    this->background = 0;
+    background = 0;
 }
 
 /** @public **/
 void Console::fg_clear() {
-    if (this->foreground) {
-        this->set_mode(foreground, false);
+    if (foreground) {
+        set_foreground(DEFAULT_FOREGROUND);
     }
-    this->foreground = 0;
+    foreground = 0;
 }
 
 /** @public **/
-void Console::fg_rgb(uint8_t red, uint8_t green, uint8_t blue) {
-    printf("\e[38;2;%d;%d;%d;m", red, green, blue);
-}
+//void Console::fg_rgb(uint8_t red, uint8_t green, uint8_t blue) {
+//    set_foreground(RGB(red, green, blue));
+//}
 
 /** @public **/
-void Console::bg_rgb(uint8_t red, uint8_t green, uint8_t blue) {
-    printf("\e[48;2;%d;%d;%d;m", red, green, blue);
-}
+//void Console::bg_rgb(uint8_t red, uint8_t green, uint8_t blue) {
+//    set_background(RGB(red, green, blue));
+//}
 
 /** @public **/
 void Console::bg_black() {
-    this->set_color(BG_BLACK, true);
-    this->background = BG_BLACK;
+    set_background(BG_BLACK);
 }
 
 /** @public **/
 void Console::fg_black() {
-    this->set_color(FG_BLACK, true);
-    this->foreground = FG_BLACK;
+    set_foreground(FG_BLACK);
 }
 
 /** @public **/
 void Console::bg_red() {
-    this->set_color(BG_RED, true);
-    this->background = BG_RED;
+    set_background(BG_RED);
 }
 
 /** @public **/
 void Console::fg_red() {
-    this->set_color(FG_RED, true);
-    this->foreground = FG_RED;
+    set_foreground(FG_RED);
 }
 
 /** @public **/
 void Console::bg_green() {
-    this->set_color(BG_GREEN, true);
-    this->background = BG_GREEN;
+    set_background(BG_GREEN);
 }
 
 /** @public **/
 void Console::fg_green() {
-    this->set_color(FG_GREEN, true);
-    this->foreground = FG_GREEN;
+    set_foreground(FG_GREEN);
 }
 
 /** @public **/
 void Console::bg_yellow() {
-    this->set_color(BG_YELLOW, true);
-    this->background = BG_YELLOW;
+    set_background(BG_YELLOW);
 }
 
 /** @public **/
 void Console::fg_yellow() {
-    this->set_color(FG_YELLOW, true);
-    this->foreground = FG_YELLOW;
+    set_foreground(FG_YELLOW);
 }
 
 /** @public **/
 void Console::bg_blue() {
-    this->set_color(BG_BLUE, true);
-    this->background = BG_BLUE;
+    set_background(BG_BLUE);
 }
 
 /** @public **/
 void Console::fg_blue() {
-    this->set_color(FG_BLUE, true);
-    this->foreground = FG_BLUE;
+    set_foreground(FG_BLUE);
 }
 
 /** @public **/
 void Console::bg_magenta() {
-    this->set_color(BG_MAGENTA, true);
-    this->background = BG_MAGENTA;
+    set_background(BG_MAGENTA);
 }
 
 /** @public **/
 void Console::fg_magenta() {
-    this->set_color(FG_MAGENTA, true);
-    this->foreground = FG_MAGENTA;
+    set_foreground(FG_MAGENTA);
 }
 
 /** @public **/
 void Console::bg_cyan() {
-    this->set_color(BG_CYAN, true);
-    this->background = BG_CYAN;
+    set_background(BG_CYAN);
 }
 
 /** @public **/
 void Console::fg_cyan() {
-    this->set_color(FG_CYAN, true);
-    this->foreground = FG_CYAN;
+    set_foreground(FG_CYAN);
 }
 
 /** @public **/
 void Console::bg_white() {
-    this->set_color(BG_WHITE, true);
-    this->background = BG_WHITE;
+    set_background(BG_WHITE);
 }
 
 /** @public **/
 void Console::fg_white() {
-    this->set_color(FG_WHITE, true);
-    this->foreground = FG_WHITE;
+    set_foreground(FG_WHITE);
 }
 
 void Console::print(const char *fmt, ...) {
     va_list ap;
+    char buffer[1024];
 
     va_start(ap, fmt);
-    vprintf(fmt, ap);
+    vsprintf(buffer, fmt, ap);
     va_end(ap);
-    fflush(stdout);
+#ifdef USE_NCURSES
+    printw("%s", buffer);
+#else
+    printf("%s", buffer);
+#endif
 }
 
 void Console::println(const char *fmt, ...) {
     va_list ap;
 
+    char buffer[1024];
     va_start(ap, fmt);
-    vprintf(fmt, ap);
+    vsprintf(buffer, fmt, ap);
     va_end(ap);
-    fflush(stdout);
-    this->newline();
+#ifdef USE_NCURSES
+    printw("%s", buffer);
+#else
+    printf("%s", buffer);
+#endif
+    newline();
 }
 
 void Console::inverseln(const char *fmt, ...) {
+#ifdef USE_NCURSES
+    char buffer[1024];
     va_list ap;
 
     va_start(ap, fmt);
+    vsprintf(buffer, fmt, ap);
+    va_end(ap);
+//    console.default_colors();
+    console.mode_inverse(true);
+    printw("%s", buffer);
+    console.mode_inverse(false);
+    console.mode_clear();
+    console.clear_eol();
+    fflush(stdout);
+#else
+    va_list ap;
+
+    va_start(ap, fmt);
+//    console.mode_inverse(true);
     console.bg_white();
     console.fg_black();
     vprintf(fmt, ap);
@@ -458,40 +729,58 @@ void Console::inverseln(const char *fmt, ...) {
     fputs("\n", stdout);
     console.mode_clear();
     fflush(stdout);
+#endif
+    newline();
 }
 
-void Console::wprint(const wchar_t *fmt, ...) {
+void Console::wprintf(const wchar_t *fmt, ...) {
+#ifdef USE_NCURSES
+    va_list ap;
+
+    wchar_t buffer[1024];
+    va_start(ap, fmt);
+    vswprintf(buffer, 1024, fmt, ap);
+    va_end(ap);
+    ::addwstr((wchar_t *) buffer);
+    debug.printw(L"buffer: %ls\n", buffer);
+#else
     va_list ap;
 
     va_start(ap, fmt);
     vwprintf(fmt, ap);
     va_end(ap);
     fflush(stdout);
+#endif
+
 }
 
-void Console::wprintln(const wchar_t *fmt, ...) {
+void Console::wprintfln(const wchar_t *fmt, ...) {
     va_list ap;
 
+    wchar_t buffer[1024];
     va_start(ap, fmt);
-    vwprintf(fmt, ap);
+    vswprintf(buffer, 1024, fmt, ap);
     va_end(ap);
-    this->clear_eol();
-    fputs("\n", stdout);
-    fflush(stdout);
+    debug.printw(L"addwstr %ls\n", buffer);
+    ::addwstr((wchar_t *) buffer);
+//    ::printw ((const wchar_t *)buffer);			/* generated:WIDEC */
+
+    clear_eol();
+    newline();
 }
 
 void Console::gauge(int aWidth, double pct, char fill) {
-    this->print("[");
+    print("[");
     int toFill = aWidth * pct / 100.,
             i;
     for (i = 0; i < toFill; i++) {
-        this->print("%c", fill);
+        print("%c", fill);
     }
     while (i < aWidth) {
-        this->print(" ");
+        print(" ");
         i++;
     }
-    this->print("]");
+    print("]");
 }
 
 void Console::window(int aRow, int aCol, int aWidth, int aHeight, const char *aTitle) {
@@ -501,28 +790,28 @@ void Console::window(int aRow, int aCol, int aWidth, int aHeight, const char *aT
 
     // top row
     moveTo(r++, aCol);
-    wprint(L"%lc", 0x2554);
+    wprintf(L"%lc", 0x2554);
     for (int i = 0; i < w; i++) {
-        wprint(L"%lc", 0x2550);
+        wprintf(L"%lc", 0x2550);
     }
-    wprint(L"%lc", 0x2557);
+    wprintf(L"%lc", 0x2557);
 
     // middle rows
     for (int hh = 0; hh < h; hh++) {
         moveTo(r++, aCol);
-        wprint(L"%lc", 0x2551);
+        wprintf(L"%lc", 0x2551);
         for (int i = 0; i < w; i++) {
-            wprint(L"%lc", ' ');
+            wprintf(L"%lc", ' ');
         }
-        wprint(L"%lc", 0x2551);
+        wprintf(L"%lc", 0x2551);
     }
     // bottom row
     moveTo(r++, aCol);
-    wprint(L"%lc", 0x255a);
+    wprintf(L"%lc", 0x255a);
     for (int i = 0; i < w; i++) {
-        wprint(L"%lc", 0x2550);
+        wprintf(L"%lc", 0x2550);
     }
-    wprint(L"%lc", 0x255d);
+    wprintf(L"%lc", 0x255d);
 
     if (aTitle) {
         moveTo(aRow, aCol + 2);
@@ -532,10 +821,14 @@ void Console::window(int aRow, int aCol, int aWidth, int aHeight, const char *aT
 
 void Console::newline(bool erase) {
     if (erase) {
-        this->clear_eol();
+        clear_eol();
     }
-    fputs("\n", stdout);
+#ifdef USE_NCURSES
+    printw("\n");
+#else
+    printf("\n");
     fflush(stdout);
+#endif
 }
 
 Console console;

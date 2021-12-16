@@ -1,21 +1,25 @@
 #include "cctop.h"
 #include <clocale>
+#include <unistd.h>
 
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
 
 void resize_help() {
+#if !debug
     console.clear();
     console.println("Window is %dx%d and needs to be at least %dx%d]",
                     console.width, console.height,
                     MIN_WIDTH, MIN_HEIGHT);
+#endif
 }
 
 int required_lines = -1;
 
 uint16_t loop() {
     if (console.width < MIN_WIDTH || console.height < MIN_HEIGHT) {
+        debug.log("resize_help");
         resize_help();
         return 0;
     }
@@ -28,9 +32,10 @@ uint16_t loop() {
     network.update();
     processList.update();
 
-    console.moveTo(1, 1);
+    console.moveTo(0, 0);
     lines += platform.print();
-    console.newline();
+//    console.newline();
+//    console.update();
     lines++;
 
     if (!options.showHelp) {
@@ -73,7 +78,7 @@ uint16_t loop() {
     Help::show();
     lines++;
     console.print("%d/%d lines %dx%d\n", lines, required_lines, console.width, console.height);
-    console.clear(true);
+//    console.clear(true);
     return lines;
 }
 
@@ -131,7 +136,8 @@ int main() {
     loop();
     for (;;) {
         loop();
-        if (console.getch(&c, true)) {
+        console.update();
+        if (console.read_character(&c, true)) {
             options.process(c);
         }
     }

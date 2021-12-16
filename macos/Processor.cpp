@@ -19,6 +19,7 @@
  */
 #include "../cctop.h"
 #include <mach/mach_host.h>
+#include <unistd.h>
 
 //    2581 ▁
 //    2582 ▂
@@ -44,6 +45,7 @@ struct dots {
 };
 
 static void renderColor(int ndx) {
+#ifdef USE_NCURSES
     switch (ndx) {
         case 0:
             console.fg_yellow();
@@ -75,9 +77,53 @@ static void renderColor(int ndx) {
         default:
             break;
     }
+#else
+    switch (ndx) {
+        case 0:
+            console.fg_yellow();
+            break;
+        case 1:
+            console.fg_cyan();
+            break;
+        case 2:
+            console.fg_cyan();
+            break;
+        case 3:
+            console.mode_bold();
+            console.fg_blue();
+            break;
+        case 4:
+            console.fg_magenta();
+            break;
+        case 5:
+            console.fg_magenta();
+            console.mode_bold();
+            break;
+        case 6:
+            console.fg_red();
+            break;
+        case 7:
+            console.fg_red();
+            console.mode_bold();
+            break;
+        default:
+            break;
+    }
+#endif
 }
 
 static void renderDot(int ndx) {
+#ifdef USE_NCURSES
+    if (ndx >= 0 && ndx <= 7) {
+        renderColor(ndx);
+        console.wprintf(L"%lc", dots[ndx].ch);
+//        console.fg_rgb(255, 255, 255);
+//        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
+        console.mode_clear();
+    } else {
+        console.print(" ");
+    }
+#else
     if (ndx >= 0 && ndx <= 7) {
         renderColor(ndx);
 //        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
@@ -87,6 +133,7 @@ static void renderDot(int ndx) {
     } else {
         console.print(" ");
     }
+#endif
 }
 
 CPU::CPU() {
@@ -137,7 +184,8 @@ void CPU::print() {
     history[CPU_HISTORY_SIZE - 1] = ndx;
 
     renderColor(ndx);
-    console.wprint(L"  %-6s %6.1f%% %6.1f%% %6.1f%% %6.1f%% %6.1f%% ",
+
+    console.wprintf(L"  %-6s %6.1f%% %6.1f%% %6.1f%% %6.1f%% %6.1f%% ",
                    this->name,
                    _use,
                    _user,
@@ -170,11 +218,11 @@ void CPU::print() {
 
     for (wchar_t i: history) {
         renderDot(i);
-//        console.wprint(L"%lc", i);
+//        console.wprintf(L"%lc", i);
     }
     console.newline();
 //    if (total != 0) {
-//        console.wprintln(L" %lc", c);
+//        console.wprintfln(L" %lc", c);
 //    }
 }
 

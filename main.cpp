@@ -2,7 +2,6 @@
 #include <clocale>
 #include <unistd.h>
 
-
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
 
@@ -19,7 +18,7 @@ int required_lines = -1;
 
 uint16_t loop() {
     if (console.width < MIN_WIDTH || console.height < MIN_HEIGHT) {
-        debug.log("resize_help");
+//        debug.log("resize_help");
         resize_help();
         return 0;
     }
@@ -33,51 +32,40 @@ uint16_t loop() {
     processList.update();
 
     console.moveTo(0, 0);
-    lines += platform.print();
-//    console.newline();
-//    console.update();
-    lines++;
+    console.mode_clear();
 
+#ifndef USE_NCURSES
     if (!options.showHelp) {
-        lines += processor.print();
-        if (lines < required_lines && !options.condenseMain) {
-            console.newline();
-            lines++;
+#endif
+    bool condense = options.condenseMain;
+    options.condenseCPU = false;
+    if (console.height < 40) {
+        options.condenseCPU = true;
+        if (console.height < 35) {
+            condense = true;
         }
-
-        lines += memory.print();
-        if (lines < required_lines && !options.condenseMain) {
-            console.newline();
-            lines++;
-        }
-        lines += memory.printVirtualMemory();
-        if (lines < required_lines && !options.condenseMain) {
-            console.newline();
-            lines++;
-        }
-
-
-        lines += disk.print();
-        if (lines < required_lines && !options.condenseMain) {
-            console.newline();
-            lines++;
-        }
-
-        lines += network.print();
-        if (lines < required_lines && !options.condenseMain) {
-            console.newline();
-            lines++;
-        }
-
-        lines += processList.print();
     }
+    else if (console.height < 45) {
+        condense = true;
+    }
+//    debug.log("window %d x %d %d\n", console.width, console.height, condense);
+    lines += platform.print(!condense);
+    lines += processor.print(!condense);
+    lines += memory.print(!condense);
+    lines += memory.printVirtualMemory(!condense);
+    lines += disk.print(!condense);
+    lines += network.print(!condense);
+    lines += processList.print(!condense);
+#ifndef USE_NCURSES
+    }
+#endif
 
     if (required_lines == -1) {
         required_lines = lines;
     }
     Help::show();
     lines++;
-    console.print("%d/%d lines %dx%d\n", lines, required_lines, console.width, console.height);
+//    console.print("%d/%d lines %dx%d\n", lines, required_lines, console.width, console.height);
 //    console.clear(true);
     return lines;
 }

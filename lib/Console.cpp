@@ -26,7 +26,7 @@
 // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
 
 #include "../cctop.h"
-//#include "Console.h"
+#include "Console.h"
 #include <ncurses.h>
 #include "Options.h"
 #include <cwchar>
@@ -37,10 +37,12 @@
 #include <unistd.h>
 
 #ifdef USE_NCURSES
-#include <sys/select.h>
+
+
 #else
 
 #include <termios.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -75,6 +77,7 @@ const uint8_t BG_WHITE = COLOR_WHITE;
 
 const uint8_t DEFAULT_BACKGROUND = COLOR_BLACK;
 const uint8_t DEFAULT_FOREGROUND = COLOR_WHITE;
+
 #else
 const char ESC = 0x1b;
 
@@ -113,7 +116,7 @@ typedef struct {
 
 static ConsolePair allocated_pairs[MAX_COLOR_PAIR] = {0};
 
-static int free_pair(int pair) {
+static int free_color_pair(int pair) {
     if (pair < 1 || pair >= MAX_COLOR_PAIR || !(allocated_pairs[pair].set)) {
         return ERR;
     }
@@ -122,28 +125,32 @@ static int free_pair(int pair) {
     return OK;
 }
 
-static void init_pairs() {
-    int i;
+static void xinit_color_pairs() {
     ConsolePair *p = allocated_pairs;
 
-    for (i = 0; i < MAX_COLOR_PAIR; i++) {
+    for (int i = 0; i < MAX_COLOR_PAIR; i++) {
+        debug.log("i %d\n", i);
         p[i].set = false;
     }
 }
 
-static int find_pair(uint8_t fg, uint8_t bg) {
+static int find_color_pair(uint8_t fg, uint8_t bg) {
     int i;
     ConsolePair *p = allocated_pairs;
 
     for (i = 0; i < MAX_COLOR_PAIR; i++) {
         if (p[i].set && p[i].fg == fg && p[i].bg == bg) {
+            p[i].count++;
+//            debug.log(">> find_color_pair %d", i);
             return i;
         }
     }
+//    debug.log("find_color_pair -1");
     return -1;
 }
 
 static int _find_oldest_pair() {
+//    debug.log("** find_oldest_pair");
     int i, lowind = 0, lowval = 0;
     ConsolePair *p = allocated_pairs;
 
@@ -161,22 +168,25 @@ static int _find_oldest_pair() {
     return lowind;
 }
 
-static int alloc_pair(uint8_t fg, uint8_t bg) {
-    int i = find_pair(fg, bg);
+static int alloc_color_pair(uint8_t fg, uint8_t bg) {
+    int i = find_color_pair(fg, bg);
 
     if (-1 == i) {
         i = _find_oldest_pair();
+        ConsolePair *p = allocated_pairs;
 
-#ifdef USE_NCURSES
         if (ERR == init_pair(short(i), fg, bg)) {
+//            debug.log("*** can't init_pair(%d, %d, %d)\n", i, fg, bg);
             return -1;
         }
-#else
-        return i;
-#endif
+        p[i].set = true;
+        p[i].fg = fg;
+        p[i].bg = bg;
+        p[i].count = 0;
     }
-
+    debug.log("alloc_pair (%d, %d) %d\n", fg, bg, i);
     return i;
+
 }
 #endif
 #endif
@@ -206,6 +216,20 @@ void exit_handler(int sig) {
     exit(0);
 }
 
+uint16_t Console::cursor_row() {
+#ifdef USE_NCURSES
+    current_row = getcury(stdscr);
+#endif
+    return current_row;
+}
+
+uint16_t Console::cursor_column() {
+#ifdef USE_NCURSES
+    current_column = getcury(stdscr);
+#endif
+    return current_column;
+}
+
 void Console::update() {
 #ifdef USE_NCURSES
     refresh();
@@ -228,9 +252,9 @@ void Console::cleanup() {
 
 Console::Console() {
 #ifdef USE_NCURSES
-//    init_pairs();
     initscr();
     start_color();
+//    xinit_color_pairs();
 #endif
     default_colors();
 
@@ -331,7 +355,7 @@ bool Console::read_character(int *c, bool timeout) {
         }
     }
 #else
-    ::timeout(0);
+    ::timeout(500);
 
     while (millis() < when) {
         int cc = getch();
@@ -355,10 +379,10 @@ bool Console::read_character(int *c, bool timeout) {
 void Console::show_cursor(bool on) {
 #ifdef USE_NCURSES
     if (on) {
-        echo();
+        curs_set(1);
         cursor_hidden = false;
     } else {
-        noecho();
+        curs_set(0);
         cursor_hidden = true;
     }
 #else
@@ -413,8 +437,8 @@ void Console::moveTo(uint16_t r, uint16_t c) {
     printf("%c[%d;%dH", ESC, row, col);
     fflush(stdout);
 #endif
-    row = r;
-    col = c;
+    current_row = r;
+    current_column = c;
 }
 
 /** @private */
@@ -500,7 +524,10 @@ void Console::set_mode(uint8_t attr, bool on) {
 }
 
 void Console::mode_clear() {
-#ifndef USE_NCURSES
+#ifdef USE_NCURSES
+//    default_colors();
+    attrset(A_NORMAL);
+#else
     set_mode(ATTR_OFF, true);
     fflush(stdout);
 #endif
@@ -522,11 +549,13 @@ void Console::set_colors(uint8_t fg, uint8_t bg) {
     foreground = fg;
     background = bg;
 #ifdef USE_NCURSES
+    current_pair = find_pair(fg, bg);
     if (current_pair != -1) {
-        free_pair(current_pair);
+        attron(COLOR_PAIR(current_pair));
+    } else {
+        current_pair = alloc_pair(foreground, background);
+        attron(COLOR_PAIR(current_pair));
     }
-    current_pair = alloc_pair(foreground, background);
-    attron(COLOR_PAIR(current_pair));
 #else
     printf("%c[%dm", ESC, foreground);
     printf("%c[%dm", ESC, background);
@@ -609,7 +638,7 @@ void Console::bg_red() {
 
 /** @public **/
 void Console::fg_red() {
-    set_foreground(FG_RED);
+    set_colors(FG_RED, this->background);
 }
 
 /** @public **/
@@ -624,12 +653,14 @@ void Console::fg_green() {
 
 /** @public **/
 void Console::bg_yellow() {
-    set_background(BG_YELLOW);
+    set_colors(foreground, BG_YELLOW);
+//    set_background(BG_YELLOW);
 }
 
 /** @public **/
 void Console::fg_yellow() {
-    set_foreground(FG_YELLOW);
+    set_colors(FG_YELLOW, background);
+//    set_foreground(FG_YELLOW);
 }
 
 /** @public **/
@@ -709,13 +740,13 @@ void Console::inverseln(const char *fmt, ...) {
     va_start(ap, fmt);
     vsprintf(buffer, fmt, ap);
     va_end(ap);
-//    console.default_colors();
     console.mode_inverse(true);
     printw("%s", buffer);
+    int len = this->width - strlen(buffer) - 1;
+    for (int i = 0; i < len; i++) {
+        printw(" ");
+    }
     console.mode_inverse(false);
-    console.mode_clear();
-    console.clear_eol();
-    fflush(stdout);
 #else
     va_list ap;
 
@@ -742,7 +773,7 @@ void Console::wprintf(const wchar_t *fmt, ...) {
     vswprintf(buffer, 1024, fmt, ap);
     va_end(ap);
     ::addwstr((wchar_t *) buffer);
-    debug.printw(L"buffer: %ls\n", buffer);
+//    debug.printw(L"buffer: %ls\n", buffer);
 #else
     va_list ap;
 

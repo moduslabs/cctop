@@ -369,7 +369,7 @@ uint16_t Disk::update() {
     return num_devices;
 }
 
-uint16_t Disk::print() {
+uint16_t Disk::print(bool newline) {
     uint16_t count = 0;
 
     console.inverseln("  %-16s %13s %13s %13s %13s %13s", "[D]ISK ACTIVITY",
@@ -385,6 +385,10 @@ uint16_t Disk::print() {
                             stats->total_transfers);
             count++;
         }
+    }
+    if (newline) {
+        console.newline();
+        count++;
     }
     return count;
 }

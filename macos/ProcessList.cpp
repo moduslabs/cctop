@@ -115,7 +115,7 @@ static bool cmp(Process *a, Process *b) {
     return a->pct_cpu > b->pct_cpu;
 }
 
-uint16_t ProcessList::print() {
+uint16_t ProcessList::print(bool newline) {
     uint16_t count = 0;
     std::vector<Process *> sorted, to_remove;
     // Loop through our map of processes (pid is key, value is struct).
@@ -148,6 +148,7 @@ uint16_t ProcessList::print() {
     int printed = 0;
     console.inverseln(" %6.6s %6.6s %-16.16s %-32.32s", "[P]ID", "CPU%", "USER", "NAME");
     count++;
+    int lines = console.height - console.cursor_row() -2;
     for (auto &it: sorted) {
         auto p = it;
 //        if (p->ppid > 1) continue;
@@ -155,15 +156,23 @@ uint16_t ProcessList::print() {
         auto pass = username(p->ruid);
         auto grp = groupname(p->rgid);
 
+        if (!strcmp(p->name, "cctop")) {
+            console.mode_bold(true);
+        }
         console.println(" %6d %6.1f %-16.16s %-32.32s", p->pid, p->pct_cpu * 1000, pass, p->name);
+        console.mode_bold(false);
         count++;
         if (options.condenseProcesses) {
             break;
         }
-        if (printed > 10) break;
+        if (printed > lines) break;
     }
     console.println("  %ld processes", sorted.size());
     count++;
+    if (newline) {
+        console.newline();
+        count++;
+    }
     return count;
 }
 

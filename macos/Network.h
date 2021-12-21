@@ -61,7 +61,7 @@ public:
   void update();
 
   // print network stats, unless test is set,  return # lines (would be) printed
-  uint16_t print();
+  uint16_t print(bool newline);
 };
 
 extern Network network;

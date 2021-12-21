@@ -163,7 +163,7 @@ void Platform::update() {
     this->num_processes = length / sizeof(kinfo_proc);
 }
 
-uint16_t Platform::print() {
+uint16_t Platform::print(bool newline) {
     uint16_t count = 0;
 
     this->uptime = get_uptime();
@@ -181,15 +181,16 @@ uint16_t Platform::print() {
     uint64_t hours = current_uptime / secs_per_hour;
     uint64_t minutes = (current_uptime - hours * secs_per_hour) / 60;
 
-    const int width = console.width ? console.width : 80;
-    char out[width + 1];
-    sprintf(out, " cctop/%llu [%s/%s %s]", options.read_timeout/1000, hostname, sysname, release);
-    size_t fill = width - strlen(out) - strlen(s) - 1;
+//    const int width = console.width ? console.width : 80;
+    char out[console.width + 1];
+    sprintf(out, " cctop/%llu [%s/%s %s] %d x %d", options.read_timeout / 1000, hostname, sysname, release, console.width, console.height);
+    size_t fill = console.width - strlen(out) - strlen(s) - 2;
     char *ptr = &out[strlen(out)];
     while (fill > 0) {
         *ptr++ = ' ';
         fill--;
     }
+    *ptr = '\0';
     strcat(ptr, s);
     console.inverseln(out);
     count++;
@@ -225,7 +226,11 @@ uint16_t Platform::print() {
     }
     console.clear_eol();
     console.newline();
-    count++;
+
+    if (newline) {
+        console.newline();
+        count++;
+    }
     return count;
 }
 

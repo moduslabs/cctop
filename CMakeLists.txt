@@ -36,7 +36,6 @@ pkg_check_modules(CURL libcurl REQUIRED)
 set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
 
-#pkg_check_modules(CURSES libncursesw REQUIRED)
 find_package(Curses REQUIRED)
 #include(FindNcursesw)
 #find_package(Ncursesw REQUIRED)

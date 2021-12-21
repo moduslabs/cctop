@@ -31,7 +31,7 @@ void Debug::log(const char *fmt, ...) {
     va_end(ap);
 
     if (logfile != nullptr) {
-        fprintf(logfile, "%s\n", buffer);
+        fprintf(logfile, "%s", buffer);
         fflush(logfile);
     }
 #endif
@@ -47,7 +47,7 @@ void Debug::printw(const wchar_t *fmt, ...) {
     va_end(ap);
 
     if (logfile != nullptr) {
-        fwprintf(logfile, L"%ls\n", buffer);
+        fwprintf(logfile, L"%ls", buffer);
         fflush(logfile);
     }
 #endif

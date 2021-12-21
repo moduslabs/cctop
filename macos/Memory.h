@@ -64,9 +64,9 @@ public:
     void update();
 
     // print memory stats unless test is set
-    uint16_t print() const;
+    uint16_t print(bool newline) const;
 
-    uint16_t printVirtualMemory();
+    uint16_t printVirtualMemory(bool newline);
 };
 
 extern Memory memory;

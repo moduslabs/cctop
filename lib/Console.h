@@ -40,7 +40,7 @@ private:
     bool aborting{}, pad{};
     int current_pair{-1};
 
-    uint16_t row{}, col{}; // cursor location
+    uint16_t current_row{0}, current_column{0};
 
     // modes
     bool bold{false},
@@ -70,6 +70,8 @@ public:
     // Also clears the screen/window.
     void resize();
     void update();
+    uint16_t cursor_row();
+    uint16_t cursor_column();
 
 public:
     void raw(bool on = true);

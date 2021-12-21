@@ -95,7 +95,7 @@ void Memory::update() {
     delta->swap_free = current->swap_free - last->swap_free;
 }
 
-uint16_t Memory::print() const {
+uint16_t Memory::print(bool newline) const {
     uint16_t count = 0;
     console.inverseln("%-12s %9s %9s %9s %9s %9s",
                       "  [M]EMORY", "Total", "Used", "Free", "Wired", "Cached");
@@ -115,10 +115,14 @@ uint16_t Memory::print() const {
         console.println("  %-12s %'9lld %'9lld %'9lld", "Swap", this->current.swap_size / 1024 / 1024,
                         this->current.swap_used / 1024 / 1024, this->current.swap_free / 1024 / 1024);
     }
+    if (newline) {
+        console.newline();
+        count++;
+    }
     return count; // # lines printed
 }
 
-uint16_t Memory::printVirtualMemory() {
+uint16_t Memory::printVirtualMemory(bool newline) {
     uint16_t count = 0;
 
     console.inverseln("  %-16s %19s %22s", "[V]IRTUAL MEMORY", "  IN Current OUT  ", "  IN Aggregate OUT ");
@@ -135,6 +139,10 @@ uint16_t Memory::printVirtualMemory() {
                         this->delta.swapouts / 1024 / 1024,
                         this->current.swapins / 1024 / 1024,
                         this->current.swapouts / 10924 / 1024);
+        count++;
+    }
+    if (newline) {
+        console.newline();
         count++;
     }
     return count;

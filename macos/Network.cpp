@@ -132,10 +132,15 @@ void Network::update() {
     }
 }
 
-uint16_t Network::print() {
+uint16_t Network::print(bool newline) {
     uint16_t count = 0;
-    console.inverseln("  %-10s %13s %13s %13s %13s %13s %13s", "[N]ETWORK", "Read (B/s)", "Write (B/s)", "RX Packets",
-                      "TX Packets", "Total RX", "Total TX");
+    if (console.width < 98) {
+        console.inverseln("  %-10s %13s %13s", "[N]ETWORK", "Read (B/s)", "Write (B/s)", "RX Packets");
+    } else {
+        console.inverseln("  %-10s %13s %13s %13s %13s %13s %13s", "[N]ETWORK", "Read (B/s)", "Write (B/s)",
+                          "RX Packets",
+                          "TX Packets", "Total RX", "Total TX");
+    }
     count++;
 
     if (!options.condenseNetwork) {
@@ -147,18 +152,30 @@ uint16_t Network::print() {
             }
             auto *c = (Interface *) this->current[name];
             if (i->flags & IFF_UP && this->current[i->name]->packetsIn) {
-                console.println("  %-10s %'13lld %'13lld %'13lld %'13lld %'13lld %'13lld",
-                                i->name.c_str(),
-                                i->bytesIn,
-                                i->bytesOut,
-                                i->packetsIn,
-                                i->packetsOut,
-                                c->packetsIn,
-                                c->packetsOut
-                );
+                if (console.width < 98) {
+                    console.println("  %-10s %'13lld %'13lld",
+                                    i->name.c_str(),
+                                    i->bytesIn,
+                                    i->bytesOut
+                    );
+                } else {
+                    console.println("  %-10s %'13lld %'13lld %'13lld %'13lld %'13lld %'13lld",
+                                    i->name.c_str(),
+                                    i->bytesIn,
+                                    i->bytesOut,
+                                    i->packetsIn,
+                                    i->packetsOut,
+                                    c->packetsIn,
+                                    c->packetsOut
+                    );
+                }
                 count++;
             }
         }
+    }
+    if (newline) {
+        console.newline();
+        count++;
     }
     return count;
 }

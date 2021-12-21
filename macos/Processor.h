@@ -37,6 +37,7 @@ struct CPU {
     void diff(CPU *newer, CPU *older);
 
     void print();
+    void addHistory(int h);
 };
 
 class Processor {
@@ -57,7 +58,7 @@ public:
 
     void update();
 
-    uint16_t print();
+    uint16_t print(bool newline);
 };
 
 extern Processor processor;

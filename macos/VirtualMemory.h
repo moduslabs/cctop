@@ -37,7 +37,7 @@ public:
   void read(VMStats *stats);
   void copy(VMStats *dst, VMStats *src);
   void update();
-  uint16_t print(bool test);
+  uint16_t print(bool newline);
 };
 
 extern VirtualMemory virtual_memory;

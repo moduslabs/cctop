@@ -1,5 +1,16 @@
 # cctop
 
+## Building
+
+### MacOS
+
+This program is built with cmake.  We use the cmake from homebrew, setting the 
+path in the CLion IDE settings.  We also installed ncurses using homebrew and 
+set the paths in CMakeLists.txt to use that.  The reason is that the curses
+that comes with XCode and MacOS is very old and doesn't support wide characters.
+
+What we really want is libncursesw.dylib (w on the end means wide character support).
+
 ## WIDE CHARACTERS (UTF_16)
 ```c++
     //    0x2581 ▁

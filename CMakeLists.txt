@@ -1,13 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 project(cctop)
-set(CMAKE_CXX_STANDARD 14)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+#set(CURSES_INCLUDE_PATH "/opt/homebrew/ncurses/include")
+
+set(CMAKE_CXX_STANDARD 17)
 
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
- endif()
+else ()
+    set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/ncurses")
+endif ()
 
-
-add_executable (cctop
+add_executable(cctop
+        cctop.h
         main.cpp
         lib/Console.cpp lib/Console.h
         lib/Parser.cpp lib/Parser.h
@@ -17,16 +23,38 @@ add_executable (cctop
         macos/Platform.cpp macos/Platform.h
         macos/Processor.cpp macos/Processor.h
         macos/VirtualMemory.cpp macos/VirtualMemory.h
-        macos/ProcessList.cpp macos/ProcessList.h macos/Battery.cpp macos/Battery.h lib/Options.cpp lib/Options.h lib/Help.cpp lib/Help.h cctop.h common/Docker.cpp common/Docker.h)
+        macos/ProcessList.cpp macos/ProcessList.h
+        macos/Battery.cpp macos/Battery.h
+        lib/Options.cpp lib/Options.h
+        lib/Help.cpp lib/Help.h
+        common/Docker.cpp common/Docker.h
+        common/Debug.cpp common/Debug.h)
 
 include(FindPkgConfig)
 pkg_check_modules(CURL libcurl REQUIRED)
+
+set(CURSES_NEED_NCURSES TRUE)
+set(CURSES_NEED_WIDE TRUE)
+
+find_package(Curses REQUIRED)
+#include(FindNcursesw)
+#find_package(Ncursesw REQUIRED)
+#find_library(NCURSESW NAMES "ncursesw" PATHS "/opt/homebrew/opt/ncurses/lib")
+#message(FATAL_ERROR ${NCURSESW})
+#find_package(Ncursesw)
+
+#    message(FATAL_ERROR "not found ncursesw")
+#if (NOT NCURSESW_FOUND)
+#    message(FATAL_ERROR "not found ncursesw")
+#endif ()
+
 include_directories(
-        macos ${CURL_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS} ${CURSES_INCLUDE_DIRS} macos
 )
 target_link_libraries(
         cctop
         ${CURL_LIBRARIES}
+        ${CURSES_LIBRARIES}
 )
 
 if (APPLE)

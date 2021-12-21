@@ -76,7 +76,7 @@ public:
 public:
   uint16_t update();
 
-  uint16_t print();
+  uint16_t print(bool newline);
 };
 
 extern Disk disk;

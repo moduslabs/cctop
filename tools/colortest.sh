@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Kitty version: $( ~/.local/kitty.app/bin/kitty --version )"
+#echo "Kitty version: $( /Applications/kitty.app/bin/kitty --version )"
 
 tmux_version=$(tmux -V)
 echo "tmux version: $tmux_version"
@@ -24,5 +24,3 @@ awk 'BEGIN{
     }
     printf "\n";
 }'
-echo 'Press CTRL+C to quit test.'
-sleep inf

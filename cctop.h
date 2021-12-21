@@ -1,7 +1,21 @@
 #ifndef CCTOP_CCTOP_H
 #define CCTOP_CCTOP_H
 
-#define DEBUG 0
+#define USE_NCURSES
+//#undef USE_NCURSES
+
+// define VERBOSE to enable debug printing
+#define VERBOSE
+//#undef VERBOSE
+// debug print to this file:
+#define DEBUG_LOGFILE "/tmp/cctop.log"
+
+#ifdef USE_NCURSES
+#define _XOPEN_SOURCE_EXTENDED
+#include <ncurses.h>
+#endif
+
+#include "common/Debug.h"
 
 #include "lib/Console.h"
 #include "lib/Options.h"
@@ -15,6 +29,6 @@
 #include "macos/ProcessList.h"
 #include "macos/Battery.h"
 
-const int MIN_WIDTH = 99, MIN_HEIGHT = 48;
+const int MIN_WIDTH = 96, MIN_HEIGHT = 30;
 
 #endif //CCTOP_CCTOP_H

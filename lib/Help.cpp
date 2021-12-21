@@ -8,24 +8,25 @@ static const char *true_false(bool t) {
 
 void Help::show() {
     if (options.showHelp) {
-        int margin = 2, padding = 2;
-        console.window(5, margin + 1,
-                       console.width - margin - margin, 14,
-                       "HELP");
-        int row = margin + 1 + padding,
-                col = margin + 1 + padding;
+        int margin = 4, padding = 2,
+                row = margin, col = margin,
+                height = 15;
 
+        console.window(row, margin,
+                       console.width - margin - margin, height,
+                       "HELP");
 //        console.moveTo(row++, col);
 //        console.print("HELP");
-        row++;
-        row++;
+        row += padding;
+        col += padding;
 
         console.moveTo(row++, col);
         console.print("C %-48.48s %s", "toggles condensed CPU display", true_false(options.condenseCPU));
         console.moveTo(row++, col);
         console.print("M %-48.48s %s", "toggles condensed Memory display", true_false(options.condenseMemory));
         console.moveTo(row++, col);
-        console.print("V %-48.48s %s", "toggles condensed Virtual Memory display", true_false(options.condenseVirtualMemory));
+        console.print("V %-48.48s %s", "toggles condensed Virtual Memory display",
+                      true_false(options.condenseVirtualMemory));
         console.moveTo(row++, col);
         console.print("D %-48.48s %s", "toggles condensed Disk Activity display", true_false(options.condenseDisk));
         console.moveTo(row++, col);

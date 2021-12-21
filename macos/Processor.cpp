@@ -19,6 +19,7 @@
  */
 #include "../cctop.h"
 #include <mach/mach_host.h>
+#include <unistd.h>
 
 //    2581 ▁
 //    2582 ▂
@@ -44,6 +45,54 @@ struct dots {
 };
 
 static void renderColor(int ndx) {
+#ifdef USE_NCURSES
+    switch (ndx) {
+        case -1:
+//            debug.log("x ");
+            console.mode_clear();
+            break;
+        case 0:
+//            debug.log("y ");
+            console.fg_yellow();
+            break;
+        case 1:
+//            debug.log("c ");
+            console.fg_cyan();
+            break;
+        case 2:
+//            debug.log("cb ");
+            console.mode_bold();
+            console.fg_cyan();
+            break;
+        case 3:
+//            debug.log("b ");
+            console.fg_blue();
+            break;
+        case 4:
+//            debug.log("bb ");
+            console.mode_bold();
+            console.fg_blue();
+            break;
+        case 5:
+//            debug.log("m ");
+            console.fg_magenta();
+            break;
+        case 6:
+//            debug.log("mb ");
+            console.mode_bold();
+            console.fg_magenta();
+            break;
+        case 7:
+//            debug.log("rb ");
+            console.fg_red();
+            console.mode_bold();
+            break;
+        default:
+//            debug.log("x ");
+            console.mode_clear();
+            break;
+    }
+#else
     switch (ndx) {
         case 0:
             console.fg_yellow();
@@ -75,9 +124,20 @@ static void renderColor(int ndx) {
         default:
             break;
     }
+#endif
 }
 
-static void renderDot(int ndx) {
+static void renderDot(int level) {
+#ifdef USE_NCURSES
+    renderColor(level);
+    if (level >= 0 && level <= 7) {
+        console.wprintf(L"%lc", dots[level].ch);
+    } else {
+        // leve = -1 (uninitialized)
+        console.print(" ");
+    }
+    console.mode_clear();
+#else
     if (ndx >= 0 && ndx <= 7) {
         renderColor(ndx);
 //        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
@@ -87,6 +147,7 @@ static void renderDot(int ndx) {
     } else {
         console.print(" ");
     }
+#endif
 }
 
 CPU::CPU() {
@@ -100,6 +161,13 @@ void CPU::diff(CPU *newer, CPU *older) {
     this->nice = newer->nice - older->nice;
     this->system = newer->system - older->system;
     this->idle = newer->idle - older->idle;
+}
+
+void CPU::addHistory(int h) {
+    for (int i=0; i<CPU_HISTORY_SIZE-1; i++) {
+        history[i] = history[i+1];
+    }
+    history[CPU_HISTORY_SIZE-1] = h;
 }
 
 void CPU::print() {
@@ -129,59 +197,62 @@ void CPU::print() {
     } else {
         ndx = 7;
     }
-    for (int i = 0; i < CPU_HISTORY_SIZE - 1; i++) {
-        history[i] = history[i + 1];
-    }
 
-    wchar_t c = dots[ndx].ch;
-    history[CPU_HISTORY_SIZE - 1] = ndx;
+    addHistory(ndx);
 
-    renderColor(ndx);
-    console.wprint(L"  %-6s %6.1f%% %6.1f%% %6.1f%% %6.1f%% %6.1f%% ",
-                   this->name,
-                   _use,
-                   _user,
-                   _system,
-                   _nice,
-                   _idle);
-    console.mode_clear();
+    console.wprintf(L"  %-6s %6.1f%% %6.1f%% %6.1f%% %6.1f%% %6.1f%% ",
+                    this->name,
+                    _use,
+                    _user,
+                    _system,
+                    _nice,
+                    _idle);
+
     renderDot(ndx);
+//    console.mode_clear();
+
+
+    console.mode_bold();
     console.print(" [");
+    console.mode_clear();
 
     double use = _use / 10 * 2,
             left = 20 - use;
+
     if (_use > 0 && use == 0) {
-        use = 1;
+        _use = 1;
         left--;
     }
+
+    renderColor(ndx);
     for (int cnt = 0; cnt < int(use); cnt++) {
-        if (cnt < _use / 2) {
-            console.fg_yellow();
-        } else {
-            console.fg_red();
-        }
         console.print(">");
-        console.reset();
     }
+
     for (int cnt = 0; cnt < left; cnt++) {
         console.print(" ");
     }
-    console.print("] ");
 
-    for (wchar_t i: history) {
+    console.mode_clear();
+    console.mode_bold();
+    console.print("] ");
+    console.mode_clear();
+
+//    debug.log("\n");
+    for (int i : history) {
+//        debug.log("%d", i);
+        renderColor(i);
         renderDot(i);
-//        console.wprint(L"%lc", i);
+        console.mode_clear();
     }
+//    debug.log("\n");
     console.newline();
-//    if (total != 0) {
-//        console.wprintln(L" %lc", c);
-//    }
 }
 
 Processor::Processor() {
-    this->num_cores = this->read(this->current);
-    this->copy(this->last, this->current);
-    this->copy(this->delta, this->current);
+    num_cores = this->read(this->current);
+    copy(this->last, this->current);
+    copy(this->delta, this->current);
     this->update();
 }
 
@@ -282,25 +353,29 @@ void Processor::update() {
     cpu->idle /= this->num_cores;
 }
 
-uint16_t Processor::print() {
+uint16_t Processor::print(bool newline) {
     uint16_t count = 0;
     CPU *cpu;
 
-    console.inverseln("  %-6s %7s %7s %7s %7s %7s ", "[C]PUS", "USE", "User",
-                      "System", "Nice", "Idle");
+    console.inverseln("  %-6s %7s %7s %7s %7s %7s    %-5.5s                 %s", "[C]PUS", "Use", "User",
+                      "System", "Nice", "Idle", "Gauge", "History");
     count++;
 
     cpu = this->delta["CPU"];
     cpu->print();
     count++;
     if (!options.condenseCPU) {
-        for (int i = 0; i < this->num_cores; i++) {
+        for (int i = 0; i < num_cores; i++) {
             char name[32];
             sprintf(name, "CPU%d", i);
             cpu = this->delta[name];
             cpu->print();
             count++;
         }
+    }
+    if (newline) {
+        console.newline();
+        count++;
     }
     return count;
 }

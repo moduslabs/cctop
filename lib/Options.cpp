@@ -20,7 +20,7 @@ void Options::process(int c) {
             break;
         case 'c':
         case 'C':
-            condenseCPU = !condenseCPU;
+            condenseCPU_state = !condenseCPU_state;
             showHelp = false;
             break;
         case 'm':

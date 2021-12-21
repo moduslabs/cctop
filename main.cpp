@@ -38,7 +38,7 @@ uint16_t loop() {
     if (!options.showHelp) {
 #endif
     bool condense = options.condenseMain;
-    options.condenseCPU = false;
+    options.condenseCPU = options.condenseCPU_state;
     if (console.height < 40) {
         options.condenseCPU = true;
         if (console.height < 35) {

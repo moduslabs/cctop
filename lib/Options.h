@@ -9,6 +9,7 @@ public:
 
     bool condenseMain{false},
             condenseCPU{false},
+            condenseCPU_state{false},
             condenseMemory{false},
             condenseVirtualMemory{false},
             condenseDisk{false},

@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD 17)
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 else ()
+    # The curses/ncurses shipped with MacOS/XCode is very old and doesn't support wide characters.
+    # You will need to install ncurses using, for example, homebrew.
+    # Then edit the following line to point to where you installed the modern ncurses library and headers:
     set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/ncurses")
 endif ()
 

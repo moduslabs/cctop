@@ -97,7 +97,7 @@ void Memory::update() {
 
 uint16_t Memory::print(bool newline) const {
     uint16_t count = 0;
-    console.inverseln("%-12s %9s %9s %9s %9s %9s",
+    console.inverseln("%-12s   %9s %9s %9s %9s %9s",
                       "  [M]EMORY", "Total", "Used", "Free", "Wired", "Cached");
     count++;
 

@@ -218,7 +218,7 @@ uint16_t Platform::print(bool newline) {
     console.print("Battery: ");
     console.mode_clear();
     console.print("%.0f%% ", batteryInfo.chargePct);
-    console.gauge(20, batteryInfo.chargePct);
+    console.gauge(20, batteryInfo.chargePct, -1);
     if (batteryInfo.timeRemaining > 0) {
         console.print(" %.1f hours remaining", batteryInfo.hoursRemaining());
     } else if (batteryInfo.timeRemaining == -1) {

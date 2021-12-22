@@ -800,13 +800,45 @@ void Console::wprintfln(const wchar_t *fmt, ...) {
     newline();
 }
 
-void Console::gauge(int aWidth, double pct, char fill) {
+void Console::gauge(int aWidth, double pct, int style) {
     print("[");
+    wchar_t fill = 0x25a0;
+
     int toFill = aWidth * pct / 100.,
             i;
-    for (i = 0; i < toFill; i++) {
-        print("%c", fill);
+
+    debug.log("pct: %.2f toFill %d\n", pct, toFill);
+    switch (style) {
+        case -1:
+            if (pct < .2) {
+                fg_red();
+            }
+            else if (pct < .5) {
+                fg_yellow();
+            }
+            else {
+                fg_green();
+            }
+            break;
+        case 0:
+        default:
+            break;
+        case 1:
+            if (pct > .5) {
+                fg_green();
+            }
+            else if (pct > .2) {
+                fg_yellow();
+            }
+            else {
+                fg_red();
+            }
+            break;
     }
+    for (i = 0; i < toFill; i++) {
+        wprintf(L"%lc", fill);
+    }
+    mode_clear();
     while (i < aWidth) {
         print(" ");
         i++;
@@ -860,6 +892,27 @@ void Console::newline(bool erase) {
     printf("\n");
     fflush(stdout);
 #endif
+}
+
+const char *Console::humanSize(uint64_t bytes, char *output, int maxSize) {
+    static char static_buf[200];
+
+    const char *suffix[] = {"B", "KB", "MB", "GB", "TB"};
+    char length = sizeof(suffix) / sizeof(suffix[0]);
+
+    int i = 0;
+    double dblBytes = bytes;
+
+    if (bytes > 1024) {
+        for (i = 0; (bytes / 1024) > 0 && i < length - 1; i++, bytes /= 1024)
+            dblBytes = bytes / 1024.0;
+    }
+
+    if (output == nullptr) {
+        output = static_buf;
+    }
+    snprintf(output, maxSize, "%.02lf %s", dblBytes, suffix[i]);
+    return output;
 }
 
 Console console;

@@ -226,7 +226,7 @@ void CPU::print() {
 
     renderColor(ndx);
     for (int cnt = 0; cnt < int(use); cnt++) {
-        console.print(">");
+        console.wprintf(L"%lc", 0x25a0);
     }
 
     for (int cnt = 0; cnt < left; cnt++) {

@@ -6,7 +6,7 @@
 
 // define VERBOSE to enable debug printing
 #define VERBOSE
-#undef VERBOSE
+//#undef VERBOSE
 // debug print to this file:
 #define DEBUG_LOGFILE "/tmp/cctop.log"
 

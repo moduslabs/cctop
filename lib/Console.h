@@ -35,9 +35,9 @@ class Console {
 public:
     // console window width and height
     uint16_t width{}, height{};
-    struct termios initial_termios{0};
 
 private:
+    struct termios initial_termios{0};
     bool aborting{}, pad{};
     int current_pair{-1};
 

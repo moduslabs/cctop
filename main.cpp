@@ -72,6 +72,9 @@ uint16_t loop() {
 
 int main() {
     setlocale(LC_ALL, "");
+    if (geteuid()) {
+        console.abort("*** This program should be run as root, or via sudo!\n");
+    }
 
 #if 0
     //    2581 ▁

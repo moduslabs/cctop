@@ -5,10 +5,12 @@
 #include "../cctop.h"
 #include "Debug.h"
 #include <cstdarg>
+#include <sys/stat.h>
 
 Debug::Debug() {
 #ifdef VERBOSE
     logfile = fopen(DEBUG_LOGFILE, "w");
+    chmod(DEBUG_LOGFILE, 0666);
     fprintf(logfile, "\nBegin DEBUG log:\n");
     fflush(logfile);
 #endif

@@ -25,6 +25,7 @@
 #define C_CONSOLE_H
 
 #define _XOPEN_SOURCE_EXTENDED
+
 #include <cstdint>
 #include <cstdio>
 #include <sys/ioctl.h>
@@ -69,9 +70,15 @@ public:
     // Call to update Console's notion of width and height.
     // Also clears the screen/window.
     void resize();
+
     void update();
+
     uint16_t cursor_row();
+
     uint16_t cursor_column();
+
+public:
+    const char *humanSize(uint64_t bytes, char *output = nullptr, int maxSize = 200);
 
 public:
     void raw(bool on = true);
@@ -113,8 +120,13 @@ public:
     // emit a newline
     void newline(bool erase = true);
 
-    // print a gauge, representing the specified percentage
-    void gauge(int width, double pct, char fill = '>');
+    ///
+    /// print a gauge, representing the specified percentage
+    /// \param width
+    /// \param pct
+    /// \param style 0: none, -1: empty, 1: full
+    ///
+    void gauge(int width, double pct, int style = 0);
 
     void window(int aRow, int aCol, int aWidth, int aHeight, const char *title = "Untitled");
 
@@ -139,8 +151,11 @@ public:
 
 public:
     void default_colors();
+
     void set_colors(uint8_t fg, uint8_t bg);
+
     void set_foreground(uint8_t color);
+
     void set_background(uint8_t color);
 
 public:

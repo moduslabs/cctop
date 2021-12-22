@@ -101,14 +101,26 @@ uint16_t Memory::print(bool newline) const {
                       "  [M]EMORY", "Total", "Used", "Free", "Wired", "Cached");
     count++;
 
-    console.println("  %-12s %'9lld %'9lld %'9lld %'9lld %'9lld",
+#if 0
+    char total[200], used[200], free[200], wired[200], cached[200];
+    console.println("  %-12s %9s %9s %9s %9s %9s",
                     "Real",
-                    this->current.memory_size / 1024 / 1024,
-                    this->current.memory_used / 1024 / 1024, this->current.memory_free / 1024 / 1024,
-                    this->current.wire_count,
-                    this->page_size * (this->current.external_page_count + this->current.purgeable_count) /
-                    1024 /
-                    1024);
+                    console.humanSize(this->current.memory_size, total),
+                    console.humanSize(this->current.memory_used, used),
+                    console.humanSize(this->current.memory_free, free),
+                    console.humanSize(this->current.wire_count, wired),
+                    console.humanSize(this->page_size * (this->current.external_page_count + this->current.purgeable_count)), cached);
+#endif
+    uint64_t cached = page_size * (current.external_page_count + current.purgeable_count);
+    double pct = (double(current.memory_used) - double(cached)) / double(current.memory_size);
+    console.print("  %-12s %'9lld %'9lld %'9lld %'9lld %'9lld ",
+                  "Real",
+                  current.memory_size / 1024 / 1024,
+                  current.memory_used / 1024 / 1024, current.memory_free / 1024 / 1024,
+                  current.wire_count,
+                  page_size * (current.external_page_count + current.purgeable_count) / 1024 / 1024);
+    console.gauge(20, pct*100, 1);
+    console.newline();
     count++;
 
     if (!options.condenseMemory) {

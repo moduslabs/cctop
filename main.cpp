@@ -44,8 +44,7 @@ uint16_t loop() {
         if (console.height < 35) {
             condense = true;
         }
-    }
-    else if (console.height < 45) {
+    } else if (console.height < 45) {
         condense = true;
     }
 //    debug.log("window %d x %d %d\n", console.width, console.height, condense);
@@ -72,6 +71,25 @@ uint16_t loop() {
 
 int main() {
     setlocale(LC_ALL, "");
+    console.clear();
+    console.raw();
+
+#if __APPLE__
+    uid_t uid = geteuid();
+    if (uid != 0) { // not root's UID
+        console.moveTo(0,0);
+        console.print("*** Warning: This program should be run as root, or via sudo!\n");
+        console.print("    Otherwise, only your user processes can be examined.\n");
+        console.print("    Do you wish to continue anyway? (y/N): ");
+        int c;
+        if (!console.read_character(&c, false)) {
+            exit(0);
+        }
+        if (c == 'N' || c == 'n') {
+            exit(0);
+        }
+    }
+#endif
 
 #if 0
     //    2581 ▁

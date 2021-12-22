@@ -24,7 +24,7 @@ add_executable(cctop
         macos/Memory.cpp macos/Memory.h
         macos/Network.cpp macos/Network.h
         macos/Platform.cpp macos/Platform.h
-        macos/Processor.cpp macos/Processor.h
+        macos/CPU.cpp macos/CPU.h
         macos/VirtualMemory.cpp macos/VirtualMemory.h
         macos/ProcessList.cpp macos/ProcessList.h
         macos/Battery.cpp macos/Battery.h

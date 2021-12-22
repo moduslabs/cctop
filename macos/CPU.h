@@ -26,41 +26,41 @@
 
 const int CPU_HISTORY_SIZE = 20;
 
-struct CPU {
-    CPU();
+struct CPUCore {
+    CPUCore();
 
     int id{};
     const char *name{};
     uint64_t user{}, nice{}, system{}, idle{};
     int history[CPU_HISTORY_SIZE]{};
 
-    void diff(CPU *newer, CPU *older);
+    void diff(CPUCore *newer, CPUCore *older);
 
     void print();
     void addHistory(int h);
 };
 
-class Processor {
+class CPU {
 public:
-    std::map<std::string, CPU *> last, current, delta;
+    std::map<std::string, CPUCore *> last, current, delta;
     uint64_t total_ticks{};
     int num_cores;
 
 public:
-    Processor();
+    CPU();
 
 public:
     // returns # of processors
-    uint16_t read(std::map<std::string, CPU *> &m);
+    uint16_t read(std::map<std::string, CPUCore *> &m);
 
-    static void copy(std::map<std::string, CPU *> &dst,
-              std::map<std::string, CPU *> &src);
+    static void copy(std::map<std::string, CPUCore *> &dst,
+              std::map<std::string, CPUCore *> &src);
 
     void update();
 
     uint16_t print(bool newline);
 };
 
-extern Processor processor;
+extern CPU processor;
 
 #endif // C_CPU_H

@@ -150,27 +150,27 @@ static void renderDot(int level) {
 #endif
 }
 
-CPU::CPU() {
+CPUCore::CPUCore() {
     for (int &i: history) {
         i = -1;
     }
 }
 
-void CPU::diff(CPU *newer, CPU *older) {
+void CPUCore::diff(CPUCore *newer, CPUCore *older) {
     this->user = newer->user - older->user;
     this->nice = newer->nice - older->nice;
     this->system = newer->system - older->system;
     this->idle = newer->idle - older->idle;
 }
 
-void CPU::addHistory(int h) {
+void CPUCore::addHistory(int h) {
     for (int i=0; i<CPU_HISTORY_SIZE-1; i++) {
         history[i] = history[i+1];
     }
     history[CPU_HISTORY_SIZE-1] = h;
 }
 
-void CPU::print() {
+void CPUCore::print() {
     double total = 100.,
             _user = double(this->user),
             _system = double(this->system),
@@ -249,7 +249,7 @@ void CPU::print() {
     console.newline();
 }
 
-Processor::Processor() {
+CPU::CPU() {
     num_cores = this->read(this->current);
     copy(this->last, this->current);
     copy(this->delta, this->current);
@@ -282,7 +282,7 @@ static void sample(struct cpusample *sample) {
 }
 
 //                                                      ⢠⣿⣿                              │CPU ■■■■■■■■■■  26% ⡀⡀⡀⡀⡀   0°C│ │
-uint16_t Processor::read(std::map<std::string, CPU *> &m) {
+uint16_t CPU::read(std::map<std::string, CPUCore *> &m) {
     cpusample sam;
     sample(&sam);
     processor_cpu_load_info_t cpuLoad;
@@ -292,9 +292,9 @@ uint16_t Processor::read(std::map<std::string, CPU *> &m) {
     total_ticks = 0;
     /* kern_return_t err = */ host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &processorCount,
                                                   (processor_info_array_t *) &cpuLoad, &processorMsgCount);
-    CPU *total = m["CPU"];
+    CPUCore *total = m["CPU"];
     if (!total) {
-        total = m["CPU"] = new CPU;
+        total = m["CPU"] = new CPUCore;
         total->name = strdup("CPU");
     }
     total->system = total->user = total->nice = total->idle = 0;
@@ -302,9 +302,9 @@ uint16_t Processor::read(std::map<std::string, CPU *> &m) {
         unsigned int *cpu_ticks = &cpuLoad[i].cpu_ticks[0];
         char name[3 + 3 + 1];
         sprintf(name, "CPU%d", i);
-        CPU *cpu = m[name];
+        CPUCore *cpu = m[name];
         if (!cpu) {
-            cpu = m[name] = new CPU;
+            cpu = m[name] = new CPUCore;
             cpu->name = strdup(name);
         }
         cpu->system = cpu_ticks[CPU_STATE_SYSTEM];
@@ -321,15 +321,15 @@ uint16_t Processor::read(std::map<std::string, CPU *> &m) {
     return (uint16_t) processorCount;
 }
 
-void Processor::copy(std::map<std::string, CPU *> &dst,
-                     std::map<std::string, CPU *> &src) {
+void CPU::copy(std::map<std::string, CPUCore *> &dst,
+               std::map<std::string, CPUCore *> &src) {
     for (const auto &kv: src) {
-        CPU *o = (CPU *) kv.second;
+        CPUCore *o = (CPUCore *) kv.second;
         const char *name = o->name;
 
-        CPU *cpu = dst[name];
+        CPUCore *cpu = dst[name];
         if (!cpu) {
-            cpu = dst[name] = new CPU;
+            cpu = dst[name] = new CPUCore;
             cpu->name = strdup(name);
         }
         cpu->user = o->user;
@@ -339,23 +339,23 @@ void Processor::copy(std::map<std::string, CPU *> &dst,
     }
 }
 
-void Processor::update() {
+void CPU::update() {
     this->copy(this->last, this->current);
     this->read(this->current);
     for (const auto &kv: this->delta) {
-        CPU *cpu = (CPU *) kv.second;
+        CPUCore *cpu = (CPUCore *) kv.second;
         cpu->diff(this->current[cpu->name], this->last[cpu->name]);
     }
-    CPU *cpu = this->delta["CPU"];
+    CPUCore *cpu = this->delta["CPU"];
     cpu->user /= this->num_cores;
     cpu->system /= this->num_cores;
     cpu->nice /= this->num_cores;
     cpu->idle /= this->num_cores;
 }
 
-uint16_t Processor::print(bool newline) {
+uint16_t CPU::print(bool newline) {
     uint16_t count = 0;
-    CPU *cpu;
+    CPUCore *cpu;
 
     console.inverseln("  %-6s %7s %7s %7s %7s %7s    %-5.5s                 %s", "[C]PUS", "Use", "User",
                       "System", "Nice", "Idle", "Gauge", "History");
@@ -380,5 +380,5 @@ uint16_t Processor::print(bool newline) {
     return count;
 }
 
-Processor processor;
+CPU processor;
 

@@ -22,7 +22,7 @@
 #include "lib/Help.h"
 
 #include "macos/Platform.h"
-#include "macos/Processor.h"
+#include "macos/CPU.h"
 #include "macos/Memory.h"
 #include "macos/Disk.h"
 #include "macos/Network.h"

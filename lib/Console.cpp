@@ -36,12 +36,13 @@
 #include <cstdio>
 #include <unistd.h>
 
+#include <termios.h>
+
 #ifdef USE_NCURSES
 
 
 #else
 
-#include <termios.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -237,12 +238,12 @@ void Console::update() {
 }
 
 void Console::cleanup() {
+    tcsetattr(0, TCSANOW, &initial_termios);
     if (!aborting) {
 #ifndef USE_NCURSES
         reset();
         clear();
         show_cursor(true);
-        tcsetattr(0, TCSANOW, &initial_termios);
 #else
         endwin();
 #endif
@@ -251,6 +252,7 @@ void Console::cleanup() {
 }
 
 Console::Console() {
+    tcgetattr(0, &initial_termios);
 #ifdef USE_NCURSES
     initscr();
     start_color();
@@ -265,7 +267,6 @@ Console::Console() {
 #ifndef USE_NCURSES
     // install sigwinch handler (window resize signal)
     signal(SIGWINCH, resize_handler);
-    tcgetattr(0, &initial_termios);
 #endif
     signal(SIGINT, exit_handler);
     signal(SIGTERM, exit_handler);
@@ -284,6 +285,7 @@ void Console::abort(const char *fmt, ...) {
     vfprintf(stderr, fmt, ap);
     va_end(ap);
     fflush(stdout);
+    exit(1);
 }
 
 void Console::resize() {
@@ -324,8 +326,13 @@ void Console::raw(bool on) {
 
 bool Console::read_character(int *c, bool timeout) {
     long now = millis(), when = now + options.read_timeout;
-#ifndef USE_NCURSES
     char cc = '\0';
+#ifndef USE_NCURSES
+    if (!timeout) {
+        read(0, &cc, 1);
+        *c = cc;
+        return true;
+    }
     if (timeout) {
         while (millis() < when) {
             fd_set set;
@@ -355,6 +362,12 @@ bool Console::read_character(int *c, bool timeout) {
         }
     }
 #else
+    if (!timeout) {
+        cc = getch();
+        *c = (unsigned char)cc;
+        return true;
+    }
+
     ::timeout(500);
 
     while (millis() < when) {
@@ -812,11 +825,9 @@ void Console::gauge(int aWidth, double pct, int style) {
         case -1:
             if (pct < .2) {
                 fg_red();
-            }
-            else if (pct < .5) {
+            } else if (pct < .5) {
                 fg_yellow();
-            }
-            else {
+            } else {
                 fg_green();
             }
             break;
@@ -826,11 +837,9 @@ void Console::gauge(int aWidth, double pct, int style) {
         case 1:
             if (pct > .5) {
                 fg_green();
-            }
-            else if (pct > .2) {
+            } else if (pct > .2) {
                 fg_yellow();
-            }
-            else {
+            } else {
                 fg_red();
             }
             break;

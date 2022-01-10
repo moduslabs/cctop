@@ -19,6 +19,7 @@
  */
 
 #include "../cctop.h"
+#include "../macos/SMC.h"
 
 #include <libproc.h>
 #include <sys/utsname.h>
@@ -26,6 +27,7 @@
 #include <CoreFoundation/CFNumber.h>
 #include <mach/mach_init.h>
 #include <mach/task.h>
+#include <IOKit/IOKitLib.h>
 #include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/ps/IOPSKeys.h>
 #include <cstdio>
@@ -34,6 +36,8 @@
 #include <string.h>
 #include <ctime>
 #include <unistd.h>
+
+SMC *smc;
 
 static bool get_task_power_info(struct task_power_info *aInfo) {
     mach_msg_type_number_t count = TASK_POWER_INFO_COUNT;
@@ -55,6 +59,7 @@ static uint64_t get_uptime() {
 }
 
 Platform::Platform() {
+    smc = new SMC;
     this->refresh_time = 1;
     int cpuCount;
     int mib[2U] = {CTL_HW, HW_NCPU};
@@ -63,7 +68,7 @@ Platform::Platform() {
     assert(status == KERN_SUCCESS);
     this->cpu_count = static_cast<uint64_t>(cpuCount);
 
-    utsname buf;
+    utsname buf{};
     uname(&buf);
 
     this->hostname = strdup(buf.nodename);
@@ -198,25 +203,16 @@ uint16_t Platform::print(bool newline) {
     //  console.inverseln("cctop/%d [%s] %s/%s(%s) %s", 1, this->hostname,
     //  this->sysname, this->release, this->machine, s);
 
-    console.mode_bold(true);
-    console.print("Uptime: ");
-    console.mode_clear();
+    console.label("Uptime: ");
     console.print("%d days %d:%02d  ", days, hours, minutes);
-    console.mode_bold(true);
-    console.print("Load Average: ");
-    console.mode_clear();
+    console.label("Load Average: ");
     console.print("%5.2f %5.2f %5.2f", this->loadavg[0], this->loadavg[1],
                   this->loadavg[2]);
-    console.clear_eol();
     console.newline();
     count++;
-    console.mode_bold(true);
-    console.print("Power Source: ");
-    console.mode_clear();
+    console.label("Power Source: ");
     console.print("%s ", batteryInfo.powerSource);
-    console.mode_bold(true);
-    console.print("Battery: ");
-    console.mode_clear();
+    console.label("Battery: ");
     console.print("%.0f%% ", batteryInfo.chargePct);
     console.gauge(20, batteryInfo.chargePct, -1);
     if (batteryInfo.timeRemaining > 0) {
@@ -227,6 +223,12 @@ uint16_t Platform::print(bool newline) {
     console.clear_eol();
     console.newline();
 
+    smc->ReadAndPrintCpuTemp('C');
+    smc->ReadAndPrintGpuTemp('C');
+    smc->ReadAndPrintBatteryTemp('C');
+    console.newline();
+    count++;
+    count += smc->ReadAndPrintFanRPMs();
     if (newline) {
         console.newline();
         count++;

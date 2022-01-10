@@ -31,7 +31,7 @@ add_executable(cctop
         lib/Options.cpp lib/Options.h
         lib/Help.cpp lib/Help.h
         common/Docker.cpp common/Docker.h
-        common/Debug.cpp common/Debug.h)
+        common/Debug.cpp common/Debug.h macos/SMC.cpp macos/SMC.h)
 
 include(FindPkgConfig)
 pkg_check_modules(CURL libcurl REQUIRED)

@@ -106,9 +106,12 @@ public:
 
     // printf style output to terminal, with newline
     void println(const char *fmt, ...);
-    // print line inverse, with newline
 
+    // print line inverse, with newline
     void inverseln(const char *fmt, ...);
+
+    // print string inverse, without newline
+    void label(const char *fmt, ...);
 
     // wprintf style output to terminal
     void wprintf(const wchar_t *fmt, ...);

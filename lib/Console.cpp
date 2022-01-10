@@ -447,7 +447,7 @@ void Console::moveTo(uint16_t r, uint16_t c) {
 #ifdef USE_NCURSES
     move(r, c);
 #else
-    printf("%c[%d;%dH", ESC, row, col);
+    printf("%c[%d;%dH", ESC, r, c);
     fflush(stdout);
 #endif
     current_row = r;
@@ -743,6 +743,33 @@ void Console::println(const char *fmt, ...) {
     printf("%s", buffer);
 #endif
     newline();
+}
+
+void Console::label(const char *fmt, ...) {
+#ifdef USE_NCURSES
+    char buffer[1024];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsprintf(buffer, fmt, ap);
+    va_end(ap);
+    console.mode_bold(true);
+    printw("%s", buffer);
+    console.mode_clear();
+#else
+    va_list ap;
+
+    va_start(ap, fmt);
+//    console.mode_inverse(true);
+    console.bg_white();
+    console.fg_black();
+    vprintf(fmt, ap);
+    console.clear_eol();
+    va_end(ap);
+    fputs("\n", stdout);
+    console.mode_clear();
+    fflush(stdout);
+#endif
 }
 
 void Console::inverseln(const char *fmt, ...) {

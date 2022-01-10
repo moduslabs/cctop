@@ -138,10 +138,10 @@ static void renderDot(int level) {
     }
     console.mode_clear();
 #else
-    if (ndx >= 0 && ndx <= 7) {
-        renderColor(ndx);
+    if (level >= 0 && level <= 7) {
+        renderColor(level);
 //        console.fg_rgb(dots[ndx].r, dots[ndx].g, dots[ndx].b);
-        console.wprint(L"%lc", dots[ndx].ch);
+        console.wprintf(L"%lc", dots[level].ch);
 //        console.fg_rgb(255, 255, 255);
         console.mode_clear();
     } else {
